@@ -1,0 +1,1 @@
+we need - pip install tqdm - for progress bar while uploading files to supabase
