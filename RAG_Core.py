@@ -9,11 +9,18 @@ import json                                     # for process documents
 from tqdm import tqdm                           # for process documents / for progress bar while uploading files to supabase
 import tiktoken                                 # for chunking
 import requests                                 # for embedding using offline ollama server 
+
+
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.document_loaders import TextLoader, PyPDFLoader, Docx2txtLoader
+from langchain.schema import Document
+
+
   
 class AI:
     # the embedding model for now is text-embedding-ada-002, but we will change it to text-embedding-3-small in the future
     # if we change it, we will need to erase all the embeddings in the supabase database and re-upload them! sad!
-    def __init__(self, AI_API_Key :str, Supabase_API_Key:str, Supabase_URL:str, Main_Model :str = "gpt-4o-mini", Embedding_Model :str = "text-embedding-ada-002", max_token_response: int = 700, Vector_Search_Threshold :float = 0.5, Vector_Search_Match_Count : int=3, MAX_CHUNK_TOKENS:int = 600, OVERLAP_CHUNK_TOKENS:int = 300): 
+    def __init__(self, AI_API_Key :str, Supabase_API_Key:str, Supabase_URL:str, Main_Model :str = "gpt-4o-mini", Embedding_Model :str = "text-embedding-3-small", max_token_response: int = 700, Vector_Search_Threshold :float = 0.5, Vector_Search_Match_Count : int=3, MAX_CHUNK_TOKENS:int = 600, OVERLAP_CHUNK_TOKENS:int = 300): 
        # AI parameters
         self.AI_API_Key = AI_API_Key
         self.AI_Main_Model = Main_Model
@@ -130,7 +137,7 @@ class AI:
             # Process the file
             try:
                 print(f"Processing file: {filename}")
-                text = self.process_file(file_path,filename)
+                text = self.process_file(file_directory,filename)
                 # Save the processed file to the list
                 self.save_processed_file(filename)
             except Exception as e:
@@ -143,54 +150,8 @@ class AI:
                 return set(file.read().splitlines())
         return set()
      
-    def process_file1(self,directory: str, filename: str): # Process a single file and store its embeddings in Supabase
-       
-        # Get the file extension
-        file_extension = os.path.splitext(filename)[1].lower()
-        
-        text = ""
-        
-        if file_extension == ".txt":
-            with open(directory, "r", encoding="utf-8") as file:
-                text = file.read()
-        
-        elif file_extension == ".pdf":
-            reader = PdfReader(directory)
-            for page in reader.pages:
-                text += page.extract_text()
-        
-        elif file_extension == ".docx":
-            doc = docx.Document(directory)
-            for para in doc.paragraphs:
-                text += para.text + "\n"
-        
-        else:
-            raise ValueError(f"Unsupported file type: {file_extension}")
-        
-        chunks = self.chunk_text(text)
-        
-        for i, chunk in enumerate(chunks):
-            embedding = self.generate_embedding(chunk) # method is inherited from class AI
-            if embedding is None:
-                continue
-            
-            metadata = {"filename": filename, "chunk_index": i}
-            data = {
-                "content": chunk,
-                "embedding": json.dumps(embedding),
-                "metadata": json.dumps(metadata),
-                "file_path": directory,
-                "chunk_index": i
-            }
-            
-           # Store the embeddings to Supabase
-            try:
-                response = self.supabase.table("document_embeddings").insert(data).execute() # supabase is inherited from class AI
-            #
-            except Exception as e:
-                print(f" ERROR: Failed to store data for chunk {i}. {e}")
-
-    def process_file(self, directory: str, filename: str):
+     #process the documents manually - here we use the chunk_text method to chunk the text into smaller parts
+    def process_file1(self, directory: str, filename: str):
       
 
         file_extension = os.path.splitext(filename)[1].lower()
@@ -225,9 +186,67 @@ class AI:
             metadata = {"filename": filename, "chunk_index": i}
             data = {
                 "content": chunk,
-                "embedding": json.dumps(embedding),
-                "metadata": json.dumps(metadata),
+                "embedding": embedding.tolist(),  # Don't stringify if Supabase handles vectors
+                "metadata": {"filename": filename, "chunk_index": i},
                 "file_path": directory,
+                "chunk_index": i
+            }
+
+
+            try:
+                self.supabase.table("document_embeddings").insert(data).execute()
+            except Exception as e:
+                print(f"\n❌ ERROR at chunk {i}: {e}")
+
+    #process the documents using langchain - here we dont use the chunk_text method, because langchain does it for us
+    def process_file(self, directory: str, filename: str):
+
+        filename = filename.strip()  # Remove leading/trailing spaces
+        file_path = os.path.normpath(os.path.join(directory, filename))
+
+        file_path = os.path.join(directory, filename)
+        file_extension = os.path.splitext(filename)[1].lower()
+
+        # Use LangChain loaders based on file extension
+        if file_extension == ".txt":
+            loader = TextLoader(file_path, encoding="utf-8")
+        elif file_extension == ".pdf":
+            loader = PyPDFLoader(file_path)
+        elif file_extension == ".docx":
+            loader = Docx2txtLoader(file_path)
+        else:
+            raise ValueError(f"Unsupported file type: {file_extension}")
+
+        # Load the document (LangChain returns a list of Document objects)
+        documents = loader.load()
+
+        # Optional: Add metadata to each document (e.g., filename)
+        for doc in documents:
+            doc.metadata["filename"] = filename
+
+        # Use RecursiveCharacterTextSplitter for intelligent chunking
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=self.MAX_CHUNK_TOKEN,
+            chunk_overlap=self.OVERLAP_CHUNK_TOKENS,
+            separators=["\n\n", "\n", ".", " ", ""]
+        )
+        split_docs = splitter.split_documents(documents)
+
+        print(f"Processing '{filename}' with {len(split_docs)} chunks...\n")
+
+        for i, doc in tqdm(enumerate(split_docs), total=len(split_docs), desc="Uploading chunks"):
+            embedding = self.generate_embedding(doc.page_content)
+            if embedding is None:
+                continue
+
+            metadata = doc.metadata.copy()
+            metadata["chunk_index"] = i
+
+            data = {
+                "content": doc.page_content,
+               "embedding": embedding,  # Don't stringify if Supabase handles vectors
+                "metadata": json.dumps(metadata),
+                "file_path": file_path,
                 "chunk_index": i
             }
 
@@ -235,7 +254,6 @@ class AI:
                 self.supabase.table("document_embeddings").insert(data).execute()
             except Exception as e:
                 print(f"\n❌ ERROR at chunk {i}: {e}")
-
 
     def save_processed_file(self,filename: str): #Save the filename to the list of processed files.
         """Add a file to the list of processed files."""

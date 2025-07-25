@@ -1,7 +1,1 @@
-ProductCenter_C_PERL_Toolkit_Programmer_Guide.pdf
-ProductCenter_Install_Guide.pdf
 ProductCenter_WebLink_Toolkit_Programmer_Guide.pdf
-ProductCenter_Workflow_User_Guide.pdf
-Stingray Studio Reference Guides.pdf
-ProductCenter_WebClient_User_Guide.pdf
-Installing Oracle 19C.docx

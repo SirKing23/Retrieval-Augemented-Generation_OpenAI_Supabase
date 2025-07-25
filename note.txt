@@ -1,3 +1,4 @@
 we need - pip install tqdm - for progress bar while uploading files to supabase
+pip install langchain docx2txt pypdf - for langchain, text chunking 
 
 Files to be uploaded to Embeddings is in desktop C:\Users\YourKing\Desktop\RAG_File_Upload
