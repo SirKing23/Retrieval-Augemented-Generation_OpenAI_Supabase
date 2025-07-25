@@ -1,1 +1,3 @@
 we need - pip install tqdm - for progress bar while uploading files to supabase
+
+Files to be uploaded to Embeddings is in desktop C:\Users\YourKing\Desktop\RAG_File_Upload
