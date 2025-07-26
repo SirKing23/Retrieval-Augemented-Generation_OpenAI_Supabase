@@ -11,15 +11,14 @@ import tiktoken                                 # for chunking
 import requests                                 # for embedding using offline ollama server 
 
 
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import TextLoader, PyPDFLoader, Docx2txtLoader
-from langchain.schema import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter                          # for process documents using LangChain   
+from langchain.document_loaders import TextLoader, PyPDFLoader, Docx2txtLoader              # for process documents using LangChain  
+from langchain.schema import Document                                                       # for process documents using LangChain  
 
 
   
 class AI:
-    # the embedding model for now is text-embedding-ada-002, but we will change it to text-embedding-3-small in the future
-    # if we change it, we will need to erase all the embeddings in the supabase database and re-upload them! sad!
+
     def __init__(self, AI_API_Key :str, Supabase_API_Key:str, Supabase_URL:str, Main_Model :str = "gpt-4o-mini", Embedding_Model :str = "text-embedding-3-small", max_token_response: int = 700, Vector_Search_Threshold :float = 0.5, Vector_Search_Match_Count : int=3, MAX_CHUNK_TOKENS:int = 600, OVERLAP_CHUNK_TOKENS:int = 300): 
        # AI parameters
         self.AI_API_Key = AI_API_Key
@@ -151,7 +150,8 @@ class AI:
         return set()
      
      #process the documents manually - here we use the chunk_text method to chunk the text into smaller parts
-    def process_file1(self, directory: str, filename: str):
+   
+    def process_file1(self, directory: str, filename: str): #process the documents using manual chunking - we use chunk_text method
       
 
         file_extension = os.path.splitext(filename)[1].lower()
@@ -197,9 +197,8 @@ class AI:
                 self.supabase.table("document_embeddings").insert(data).execute()
             except Exception as e:
                 print(f"\n❌ ERROR at chunk {i}: {e}")
-
-    #process the documents using langchain - here we dont use the chunk_text method, because langchain does it for us
-    def process_file(self, directory: str, filename: str):
+  
+    def process_file(self, directory: str, filename: str):   #process the documents using langchain - here we dont use the chunk_text method, because langchain does it for us
 
         filename = filename.strip()  # Remove leading/trailing spaces
         file_path = os.path.normpath(os.path.join(directory, filename))
