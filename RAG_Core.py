@@ -43,6 +43,7 @@ class AI:
 
         #Chat History parameters
         self.chat_history = []  # Initialize an empty list to store chat history
+        self.isInitialSession=0
 
     def generate_embedding(self,text: str):
         try:        
@@ -94,20 +95,30 @@ class AI:
         context = "\n".join([doc["content"] for doc in documents])
 
         # Step 4: Append user message to history
-        self.chat_history.append({"role": "user", "content": question})
+       
 
         # Optional: Truncate history to prevent token overflow
         if len(self.chat_history) > 10:
             self.chat_history = self.chat_history[-10:]
 
         # Step 5: Construct full message history
-        messages = [{"role": "system", "content": self.AI_System_Role_Prompt}]
-        messages += self.chat_history
-        messages.append({
-            "role": "assistant",
-            "content": f"[Reference Documents]\n{context}"
-        })
 
+        #We only add the Ai prompt in the first chat
+        if(self.isInitialSession==0):
+            messages = [{"role": "system", "content": self.AI_System_Role_Prompt}]
+            self.isInitialSession=1
+               
+        if self.chat_history:
+            messages.append({"role": "system", "content": "Chat history follows:"})
+            messages += self.chat_history
+        else:
+            messages=[]
+            
+        # Add the current user query with retrieved context
+        combined_input = f"[Reference Documents]\n{context}\n\n{question}"
+        messages.append({"role": "user", "content": combined_input})
+
+        print(messages)  
         # Step 6: Call OpenAI
         chat_response = self.AI_Instance.chat.completions.create(
             model=self.AI_Main_Model,
@@ -117,6 +128,9 @@ class AI:
 
         # Step 7: Get AI response and append to history
         answer = chat_response.choices[0].message.content
+
+        # Update chat history for memory
+        self.chat_history.append({"role": "user", "content": question})
         self.chat_history.append({"role": "assistant", "content": answer})
 
         return {"response": answer}
