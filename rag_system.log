@@ -1,0 +1,76 @@
+2025-07-31 21:01:17,626 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully
+2025-07-31 21:01:22,459 - RAGSystem - INFO - No new files to process
+2025-07-31 21:01:38,548 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 21:01:41,884 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 21:01:47,925 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-31 21:01:47,974 - RAGSystem - INFO - Query processed: 43 chars, 11.30s, 3 docs retrieved
+2025-07-31 21:01:47,975 - RAGSystem - INFO - Performance - Embedding: 1.88s, Search: 3.34s, Generation: 5.37s, Total: 11.30s
+2025-07-31 21:05:13,183 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully
+2025-07-31 21:05:14,220 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 21:05:15,605 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 21:07:08,143 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully
+2025-07-31 21:07:13,106 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 21:07:14,592 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 21:09:10,915 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully
+2025-07-31 21:09:14,534 - RAGSystem - INFO - No new files to process
+2025-07-31 21:09:19,212 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 21:09:20,417 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 21:09:25,225 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-31 21:09:25,271 - RAGSystem - INFO - Query processed: 63 chars, 6.77s, 3 docs retrieved
+2025-07-31 21:09:25,271 - RAGSystem - INFO - Performance - Embedding: 0.72s, Search: 1.21s, Generation: 4.66s, Total: 6.77s
+2025-07-31 22:18:44,110 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully
+2025-07-31 22:18:48,433 - RAGSystem - INFO - No new files to process
+2025-07-31 22:18:52,761 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 22:18:55,423 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 22:19:01,833 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-31 22:19:01,900 - RAGSystem - INFO - Query processed: 63 chars, 10.57s, 3 docs retrieved
+2025-07-31 22:19:01,901 - RAGSystem - INFO - Performance - Embedding: 1.44s, Search: 2.66s, Generation: 5.76s, Total: 10.57s
+2025-07-31 23:03:51,989 - PersistentCache - INFO - Loaded embedding_cache with 3 items
+2025-07-31 23:03:51,990 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-07-31 23:03:52,000 - RAGSystem - INFO - No new files to process
+2025-07-31 23:03:53,086 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 23:03:55,696 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 23:04:04,092 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-31 23:04:04,108 - RAGSystem - INFO - Query processed: 63 chars, 12.11s, 3 docs retrieved
+2025-07-31 23:04:04,108 - RAGSystem - INFO - Performance - Embedding: 1.09s, Search: 2.61s, Generation: 8.21s, Total: 12.11s
+2025-07-31 23:04:04,114 - PersistentCache - INFO - Saved caches: 4 embeddings, 1 responses
+2025-07-31 23:04:04,114 - RAGSystem - INFO - Cache saved successfully
+2025-07-31 23:04:43,053 - PersistentCache - INFO - Loaded embedding_cache with 4 items
+2025-07-31 23:04:43,053 - PersistentCache - INFO - Loaded response_cache with 1 items
+2025-07-31 23:04:43,053 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-07-31 23:04:43,056 - PersistentCache - INFO - Saved caches: 4 embeddings, 1 responses
+2025-07-31 23:04:43,056 - RAGSystem - INFO - Cache saved successfully
+2025-07-31 23:06:53,481 - PersistentCache - INFO - Loaded embedding_cache with 4 items
+2025-07-31 23:06:53,484 - PersistentCache - INFO - Loaded response_cache with 1 items
+2025-07-31 23:06:53,484 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-07-31 23:06:54,402 - RAGSystem - INFO - No new files to process
+2025-07-31 23:13:58,055 - PersistentCache - INFO - Loaded embedding_cache with 4 items
+2025-07-31 23:13:58,057 - PersistentCache - INFO - Loaded response_cache with 1 items
+2025-07-31 23:13:58,057 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-07-31 23:13:59,058 - RAGSystem - INFO - No new files to process
+2025-07-31 23:18:22,499 - PersistentCache - INFO - Loaded embedding_cache with 4 items
+2025-07-31 23:18:22,500 - PersistentCache - INFO - Loaded response_cache with 1 items
+2025-07-31 23:18:22,500 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-07-31 23:18:22,501 - RAGSystem - INFO - No new files to process
+2025-07-31 23:19:29,030 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 23:19:30,770 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 23:19:32,873 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-31 23:19:32,911 - RAGSystem - INFO - Query processed: 61 chars, 5.83s, 2 docs retrieved
+2025-07-31 23:19:32,911 - RAGSystem - INFO - Performance - Embedding: 1.96s, Search: 1.75s, Generation: 1.94s, Total: 5.83s
+2025-07-31 23:20:14,693 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 23:20:15,120 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 23:20:23,026 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-31 23:20:23,032 - RAGSystem - INFO - Query processed: 57 chars, 10.36s, 3 docs retrieved
+2025-07-31 23:20:23,033 - RAGSystem - INFO - Performance - Embedding: 3.98s, Search: 2.17s, Generation: 9.85s, Total: 10.36s
+2025-07-31 23:22:39,379 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 23:22:40,222 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 23:23:51,949 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 23:23:52,380 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 23:24:03,267 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-31 23:24:03,275 - RAGSystem - INFO - Query processed: 45 chars, 12.37s, 3 docs retrieved
+2025-07-31 23:24:03,275 - RAGSystem - INFO - Performance - Embedding: 6.67s, Search: 3.44s, Generation: 20.74s, Total: 12.37s
+2025-07-31 23:25:31,626 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-07-31 23:25:32,699 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-07-31 23:25:42,905 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-07-31 23:25:42,910 - RAGSystem - INFO - Query processed: 21 chars, 12.66s, 3 docs retrieved
+2025-07-31 23:25:42,910 - RAGSystem - INFO - Performance - Embedding: 8.04s, Search: 4.51s, Generation: 30.95s, Total: 12.66s

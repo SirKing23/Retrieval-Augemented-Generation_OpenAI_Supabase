@@ -16,40 +16,63 @@ from langchain.document_loaders import TextLoader, PyPDFLoader, Docx2txtLoader  
 from langchain.schema import Document                                                       # for process documents using LangChain  
 
 
-  
-class AI:
+class RAGSystem:
 
-    def __init__(self, AI_API_Key :str, Supabase_API_Key:str, Supabase_URL:str, Main_Model :str = "gpt-4o-mini", Embedding_Model :str = "text-embedding-3-small", max_token_response: int = 700, Vector_Search_Threshold :float = 0.5, Vector_Search_Match_Count : int=3, MAX_CHUNK_TOKENS:int = 600, OVERLAP_CHUNK_TOKENS:int = 300): 
-       # AI parameters
-        self.AI_API_Key = AI_API_Key
-        self.AI_Main_Model = Main_Model
-        self.AI_Embedding_Model = Embedding_Model
-        self.AI_Max_Token_Response = max_token_response
-        self.AI_Instance = OpenAI(api_key=AI_API_Key)
-        self.AI_Default_No_Response = "Hmmm... I couldn't find any relevant information in the knowledge base regarding your question."
-        self.AI_System_Role_Prompt = "You are a helpful assistant with access to relevant documents and chat history. If the relevant documents and chat history has nothing to do with the user query, respond politely that the query is out of context."
-        self.MAX_CHUNK_TOKEN = MAX_CHUNK_TOKENS
-        self.OVERLAP_CHUNK_TOKENS = OVERLAP_CHUNK_TOKENS
+    def __init__(self, AI_API_Key: str, Supabase_API_Key: str, Supabase_URL: str, 
+                 Main_Model: str = "gpt-4o-mini", Embedding_Model: str = "text-embedding-3-small", 
+                 max_token_response: int = 700, Vector_Search_Threshold: float = 0.5, 
+                 Vector_Search_Match_Count: int = 3, MAX_CHUNK_TOKENS: int = 600, 
+                 OVERLAP_CHUNK_TOKENS: int = 300): 
+        
+        # Input validation
+        if not AI_API_Key or not isinstance(AI_API_Key, str):
+            raise ValueError("AI_API_Key must be a non-empty string")
+        if not Supabase_API_Key or not isinstance(Supabase_API_Key, str):
+            raise ValueError("Supabase_API_Key must be a non-empty string")
+        if not Supabase_URL or not isinstance(Supabase_URL, str):
+            raise ValueError("Supabase_URL must be a non-empty string")
+        if max_token_response <= 0:
+            raise ValueError("max_token_response must be positive")
+        if not (0.0 <= Vector_Search_Threshold <= 1.0):
+            raise ValueError("Vector_Search_Threshold must be between 0.0 and 1.0")
+        if Vector_Search_Match_Count <= 0:
+            raise ValueError("Vector_Search_Match_Count must be positive")
+        if MAX_CHUNK_TOKENS <= OVERLAP_CHUNK_TOKENS:
+            raise ValueError("MAX_CHUNK_TOKENS must be greater than OVERLAP_CHUNK_TOKENS")
+            
+        # AI parameters
+        self.ai_api_key = AI_API_Key
+        self.ai_main_model = Main_Model
+        self.ai_embedding_model = Embedding_Model
+        self.ai_max_token_response = max_token_response
+        self.ai_instance = OpenAI(api_key=AI_API_Key)
+        self.ai_default_no_response = "I couldn't find any relevant information in the knowledge base regarding your question."
+        self.ai_system_role_prompt = "You are a helpful assistant with access to relevant documents and chat history. If the relevant documents and chat history has nothing to do with the user query, respond politely that the query is out of context."
+        self.max_chunk_tokens = MAX_CHUNK_TOKENS
+        self.overlap_chunk_tokens = OVERLAP_CHUNK_TOKENS
 
-      #Supabase parameters
-        self.Supabase_key = Supabase_API_Key
-        self.Supabase_Url = Supabase_URL
-        self.supabase: Client = create_client(self.Supabase_Url, self.Supabase_key)
-        self.Supabase_Vector_Search_Threshold=Vector_Search_Threshold
-        self.Supabase_Vector_Search_Match_Count=Vector_Search_Match_Count
+        # Supabase parameters
+        self.supabase_key = Supabase_API_Key
+        self.supabase_url = Supabase_URL
+        try:
+            self.supabase: Client = create_client(self.supabase_url, self.supabase_key)
+        except Exception as e:
+            raise ConnectionError(f"Failed to connect to Supabase: {e}")
+        self.vector_search_threshold = Vector_Search_Threshold
+        self.vector_search_match_count = Vector_Search_Match_Count
 
-        #Files processing parameters
-        self.PROCESSED_FILES_LIST = "processed_files.txt"
+        # Files processing parameters
+        self.processed_files_list = "processed_files.txt"
 
-        #Chat History parameters
+        # Chat History parameters
         self.chat_history = []  # Initialize an empty list to store chat history
-        self.isInitialSession=0
+        self.is_initial_session = False
 
     def generate_embedding(self,text: str):
         try:        
-            response = self.AI_Instance.embeddings.create(
+            response = self.ai_instance.embeddings.create(
             input=text,
-            model=self.AI_Embedding_Model)
+            model=self.ai_embedding_model)
             embedding = response.data[0].embedding           
             return embedding
         except Exception as e:  
@@ -81,49 +104,44 @@ class AI:
             "match_documents", 
             {
                 "query_embedding": query_embedding,
-                "match_threshold": self.Supabase_Vector_Search_Threshold,
-                "match_count": self.Supabase_Vector_Search_Match_Count
+                "match_threshold": self.vector_search_threshold,
+                "match_count": self.vector_search_match_count
             }
         ).execute()
 
         documents = response.data if response.data else []
 
         if not documents:
-            return {"response": self.AI_Default_No_Response}
+            return {"response": self.ai_default_no_response}
 
         # Step 3: Extract content from matched docs
         context = "\n".join([doc["content"] for doc in documents])
 
-        # Step 4: Append user message to history
-       
-
-        # Optional: Truncate history to prevent token overflow
+        # Step 4: Optional: Truncate history to prevent token overflow
         if len(self.chat_history) > 10:
             self.chat_history = self.chat_history[-10:]
 
         # Step 5: Construct full message history
+        messages = []
 
-        #We only add the Ai prompt in the first chat
-        if(self.isInitialSession==0):
-            messages = [{"role": "system", "content": self.AI_System_Role_Prompt}]
-            self.isInitialSession=1
+        # We only add the AI prompt in the first chat
+        if not self.is_initial_session:
+            messages = [{"role": "system", "content": self.ai_system_role_prompt}]
+            self.is_initial_session = True
                
         if self.chat_history:
             messages.append({"role": "system", "content": "Chat history follows:"})
             messages += self.chat_history
-        else:
-            messages=[]
             
         # Add the current user query with retrieved context
         combined_input = f"[Reference Documents]\n{context}\n\n{question}"
         messages.append({"role": "user", "content": combined_input})
 
-        print(messages)  
         # Step 6: Call OpenAI
-        chat_response = self.AI_Instance.chat.completions.create(
-            model=self.AI_Main_Model,
+        chat_response = self.ai_instance.chat.completions.create(
+            model=self.ai_main_model,
             messages=messages,
-            max_tokens=self.AI_Max_Token_Response
+            max_tokens=self.ai_max_token_response
         )
 
         # Step 7: Get AI response and append to history
@@ -158,8 +176,8 @@ class AI:
 
     def load_processed_files(self): #Load the list of already processed files.
         """Load the list of already processed files."""
-        if os.path.exists(self.PROCESSED_FILES_LIST):
-            with open(self.PROCESSED_FILES_LIST, "r", encoding="utf-8") as file:
+        if os.path.exists(self.processed_files_list):
+            with open(self.processed_files_list, "r", encoding="utf-8") as file:
                 return set(file.read().splitlines())
         return set()
      
@@ -239,8 +257,8 @@ class AI:
 
         # Use RecursiveCharacterTextSplitter for intelligent chunking
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=self.MAX_CHUNK_TOKEN,
-            chunk_overlap=self.OVERLAP_CHUNK_TOKENS,
+            chunk_size=self.max_chunk_tokens,
+            chunk_overlap=self.overlap_chunk_tokens,
             separators=["\n\n", "\n", ".", " ", ""]
         )
         split_docs = splitter.split_documents(documents)
@@ -270,7 +288,7 @@ class AI:
 
     def save_processed_file(self,filename: str): #Save the filename to the list of processed files.
         """Add a file to the list of processed files."""
-        with open(self.PROCESSED_FILES_LIST, "a", encoding="utf-8") as file:
+        with open(self.processed_files_list, "a", encoding="utf-8") as file:
             file.write(filename + "\n")
    
     def chunk_text(self,text: str): # Chunk the text into smaller parts for processing
@@ -278,8 +296,8 @@ class AI:
         tokens = encoding.encode(text)
             
         chunks = []
-        for i in range(0, len(tokens), self.MAX_CHUNK_TOKEN - self.OVERLAP_CHUNK_TOKENS):
-            chunk_tokens = tokens[i:i + self.MAX_CHUNK_TOKEN]
+        for i in range(0, len(tokens), self.max_chunk_tokens - self.overlap_chunk_tokens):
+            chunk_tokens = tokens[i:i + self.max_chunk_tokens]
             chunk_text = encoding.decode(chunk_tokens)
             chunks.append(chunk_text)
         
