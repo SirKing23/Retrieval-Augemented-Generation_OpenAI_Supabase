@@ -18,6 +18,8 @@ import logging
 from pathlib import Path
 
 # Import the RAG system
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'rag_core'))
 from RAG_Core import RAGSystem
 
 # Pydantic models for request/response validation
@@ -65,7 +67,8 @@ app.add_middleware(
 )
 
 # Mount static files
-app.mount("/static", StaticFiles(directory="web_interface"), name="static")
+web_interface_path = os.path.join(os.path.dirname(__file__), '..', 'interfaces', 'web_interface')
+app.mount("/static", StaticFiles(directory=web_interface_path), name="static")
 
 # Global variables
 rag_system: Optional[RAGSystem] = None
@@ -113,7 +116,8 @@ async def shutdown_event():
 async def serve_webapp():
     """Serve the main web application"""
     try:
-        with open("web_interface/index.html", "r", encoding="utf-8") as file:
+        html_file_path = os.path.join(os.path.dirname(__file__), '..', 'interfaces', 'web_interface', 'index.html')
+        with open(html_file_path, "r", encoding="utf-8") as file:
             return HTMLResponse(content=file.read())
     except FileNotFoundError:
         return HTMLResponse(content="<h1>Error: Web interface files not found</h1>", status_code=500)

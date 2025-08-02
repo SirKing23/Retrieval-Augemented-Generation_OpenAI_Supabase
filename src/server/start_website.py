@@ -40,7 +40,7 @@ def check_requirements():
     
     if missing_packages:
         print(f"\n⚠️  Missing packages: {', '.join(missing_packages)}")
-        print("Install them with: pip install -r web_requirements.txt")
+        print("Install them with: pip install -r ../../requirements/web_requirements.txt")
         return False
     
     print("✅ All requirements satisfied!")
@@ -151,9 +151,10 @@ def main():
     print("=" * 50)
     
     # Check if RAG_Core.py exists
-    if not Path("RAG_Core.py").exists():
+    rag_core_path = Path("../rag_core/RAG_Core.py")
+    if not rag_core_path.exists():
         print("❌ RAG_Core.py not found!")
-        print("Make sure you're running this script in the correct directory")
+        print("Make sure the RAG core module is in the correct location")
         return
     
     # Check all requirements
@@ -163,7 +164,7 @@ def main():
     
     if not requirements_ok:
         print("\n❌ Please install missing requirements first:")
-        print("pip install -r web_requirements.txt")
+        print("pip install -r ../../requirements/web_requirements.txt")
         return
     
     if not env_vars_ok:
