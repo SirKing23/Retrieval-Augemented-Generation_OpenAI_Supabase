@@ -4,7 +4,7 @@ Run this after setting up your environment variables
 """
 
 import os
-from RAG_Core_Optimized import OptimizedRAGSystem, RAGSystemConfig
+from RAG_Core import OptimizedRAGSystem, RAGSystemConfig
 
 def test_source_tracking():
     """Test the new source tracking features"""

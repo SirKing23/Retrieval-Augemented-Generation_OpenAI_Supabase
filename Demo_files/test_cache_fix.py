@@ -9,7 +9,7 @@ sys.path.append(os.path.dirname(__file__))
 def test_cache_manager():
     """Test that PersistentCacheManager initializes correctly"""
     try:
-        from RAG_Core_Optimized import PersistentCacheManager
+        from RAG_Core import PersistentCacheManager
         
         print("Testing PersistentCacheManager initialization...")
         cache_manager = PersistentCacheManager()
@@ -34,7 +34,7 @@ def test_cache_manager():
 def test_rag_system():
     """Test that OptimizedRAGSystem initializes correctly"""
     try:
-        from RAG_Core_Optimized import OptimizedRAGSystem
+        from RAG_Core import OptimizedRAGSystem
         
         print("\nTesting OptimizedRAGSystem initialization...")
         rag_system = OptimizedRAGSystem()

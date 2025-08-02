@@ -1,0 +1,187 @@
+"""
+Startup Script for RAG System Web Interface
+This script helps you launch the web interface easily
+"""
+
+import os
+import sys
+import subprocess
+import time
+import webbrowser
+from pathlib import Path
+
+# Load .env file for environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("⚠️  python-dotenv not installed. .env file will not be loaded.")
+
+def check_requirements():
+    """Check if required packages are installed"""
+    print("🔍 Checking requirements...")
+    
+    required_packages = [
+        'fastapi',
+        'uvicorn',
+        'openai',
+        'supabase',
+        'langchain'
+    ]
+    
+    missing_packages = []
+    for package in required_packages:
+        try:
+            __import__(package)
+            print(f"✅ {package} - installed")
+        except ImportError:
+            missing_packages.append(package)
+            print(f"❌ {package} - missing")
+    
+    if missing_packages:
+        print(f"\n⚠️  Missing packages: {', '.join(missing_packages)}")
+        print("Install them with: pip install -r web_requirements.txt")
+        return False
+    
+    print("✅ All requirements satisfied!")
+    return True
+
+def check_environment_variables():
+    """Check if required environment variables are set"""
+    print("\n🔍 Checking environment variables...")
+    
+    required_vars = {
+        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
+        "SUPABASE_URL": os.getenv("SUPABASE_URL"), 
+        "SUPABASE_KEY": os.getenv("SUPABASE_KEY")
+    }
+    
+    missing_vars = []
+    for var_name, var_value in required_vars.items():
+        if var_value:
+            print(f"✅ {var_name} - set")
+        else:
+            missing_vars.append(var_name)
+            print(f"❌ {var_name} - missing")
+    
+    if missing_vars:
+        print(f"\n⚠️  Missing environment variables: {', '.join(missing_vars)}")
+        print("Create a .env file with these variables or set them in your system")
+        return False
+    
+    print("✅ All environment variables set!")
+    return True
+
+def check_documents_folder():
+    """Check if documents folder exists"""
+    print("\n🔍 Checking documents folder...")
+    
+    docs_folder = Path("C:\\Users\\YourKing\\Desktop\\RAG_File_Upload")
+    if docs_folder.exists():
+        doc_files = list(docs_folder.glob("*.pdf")) + list(docs_folder.glob("*.txt")) + list(docs_folder.glob("*.docx"))
+        print(f"✅ uploaded_docs folder exists with {len(doc_files)} documents")
+        
+        if doc_files:
+            print("📄 Documents found:")
+            for doc in doc_files[:5]:  # Show first 5
+                print(f"   - {doc.name}")
+            if len(doc_files) > 5:
+                print(f"   ... and {len(doc_files) - 5} more")
+        else:
+            print("⚠️  No documents found in uploaded_docs folder")
+            print("Add PDF, TXT, or DOCX files to the uploaded_docs folder")
+    else:
+        print("❌ uploaded_docs folder not found")
+        print("Creating uploaded_docs folder...")
+        docs_folder.mkdir(exist_ok=True)
+        print("✅ Created uploaded_docs folder")
+        print("📄 Add your documents (PDF, TXT, DOCX) to this folder")
+
+def start_server():
+    """Start the FastAPI server"""
+    print("\n🚀 Starting RAG System Web Interface...")
+    print("=" * 50)
+    
+    try:
+        # Start the server
+        process = subprocess.Popen([
+            sys.executable, "-m", "uvicorn", 
+            "rag_webapp:app", 
+            "--host", "0.0.0.0", 
+            "--port", "8000", 
+            "--reload"
+        ])
+        
+        # Wait a moment for server to start
+        print("⏳ Starting server...")
+        time.sleep(3)
+        
+        # Open browser
+        url = "http://localhost:8000"
+        print(f"🌐 Opening web interface at {url}")
+        webbrowser.open(url)
+        
+        print("\n✅ RAG System Web Interface is running!")
+        print("=" * 50)
+        print("📱 Web Interface: http://localhost:8000")
+        print("📚 API Documentation: http://localhost:8000/api/docs")
+        print("🔧 Alternative Docs: http://localhost:8000/api/redoc")
+        print("\n💡 Tips:")
+        print("   - Upload documents to the 'uploaded_docs' folder")
+        print("   - Use the 'Process Documents' button to index new files")
+        print("   - Ask questions about your documents in the chat")
+        print("   - Monitor performance in the sidebar")
+        print("\n⏹️  Press Ctrl+C to stop the server")
+        print("=" * 50)
+        
+        # Wait for the process
+        process.wait()
+        
+    except KeyboardInterrupt:
+        print("\n\n🛑 Shutting down server...")
+        process.terminate()
+        print("✅ Server stopped successfully")
+    except Exception as e:
+        print(f"\n❌ Error starting server: {e}")
+        print("Make sure all requirements are installed and try again")
+
+def main():
+    """Main startup function"""
+    print("🤖 RAG System Web Interface Startup")
+    print("=" * 50)
+    
+    # Check if RAG_Core.py exists
+    if not Path("RAG_Core.py").exists():
+        print("❌ RAG_Core.py not found!")
+        print("Make sure you're running this script in the correct directory")
+        return
+    
+    # Check all requirements
+    requirements_ok = check_requirements()
+    env_vars_ok = check_environment_variables() 
+    check_documents_folder()
+    
+    if not requirements_ok:
+        print("\n❌ Please install missing requirements first:")
+        print("pip install -r web_requirements.txt")
+        return
+    
+    if not env_vars_ok:
+        print("\n❌ Please set up environment variables first")
+        print("Create a .env file with your API keys")
+        return
+    
+    print("\n🎉 All checks passed! Ready to start the web interface.")
+    
+    # Ask user if they want to continue
+    try:
+        response = input("\n▶️  Start the web server? (y/n): ").lower().strip()
+        if response in ['y', 'yes', '']:
+            start_server()
+        else:
+            print("👋 Startup cancelled")
+    except KeyboardInterrupt:
+        print("\n👋 Startup cancelled")
+
+if __name__ == "__main__":
+    main()

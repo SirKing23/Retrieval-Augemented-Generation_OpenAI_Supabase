@@ -15,7 +15,7 @@ import sys
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
-    from RAG_Core_Optimized import OptimizedRAGSystem, RAGSystemConfig, RAGLogger, PerformanceMetrics
+    from RAG_Core import OptimizedRAGSystem, RAGSystemConfig, RAGLogger, PerformanceMetrics
 except ImportError as e:
     print(f"Error importing modules: {e}")
     print("Make sure RAG_Core_Optimized.py is in the same directory")

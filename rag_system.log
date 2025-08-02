@@ -862,3 +862,12 @@ postgrest.exceptions.APIError: {'code': 'PGRST204', 'details': None, 'hint': Non
 2025-08-01 21:32:16,591 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 2025-08-01 21:32:16,635 - RAGSystem - INFO - Query processed: 79 chars, 7.25s, 3 docs retrieved
 2025-08-01 21:32:16,635 - RAGSystem - INFO - Performance - Embedding: 5.78s, Search: 0.55s, Generation: 5.01s, Total: 7.25s
+2025-08-02 12:20:53,050 - PersistentCache - INFO - Loaded embedding_cache with 4 items
+2025-08-02 12:20:53,062 - PersistentCache - INFO - Loaded response_cache with 1 items
+2025-08-02 12:20:53,062 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-02 12:20:53,070 - RAGSystem - INFO - No new files to process
+2025-08-02 12:22:32,011 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 12:22:35,393 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-02 12:22:47,658 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-02 12:22:47,704 - RAGSystem - INFO - Query processed: 253 chars, 17.22s, 3 docs retrieved
+2025-08-02 12:22:47,704 - RAGSystem - INFO - Performance - Embedding: 1.53s, Search: 3.39s, Generation: 12.08s, Total: 17.22s

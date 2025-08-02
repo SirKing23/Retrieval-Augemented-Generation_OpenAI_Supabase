@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 RAG System - Intelligent Document Search</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="header">
+        <h1>🤖 RAG System - Intelligent Document Search</h1>
+        <p>Ask questions about your documents with AI-powered search and caching</p>
+    </div>
+    
+    <div class="container">
+        <div class="chat-section">
+            <h2 style="margin-bottom: 1rem; color: #374151;">💬 Chat with Your Documents</h2>
+            <div id="chat-messages" class="chat-messages">
+                <div class="message assistant">
+                    <div class="message-header">
+                        🤖 Assistant
+                    </div>
+                    <div class="message-content">
+                        Welcome! I can help you find information from your documents. Ask me anything about the uploaded documents.
+                    </div>
+                </div>
+            </div>
+            <div class="input-section">
+                <input 
+                    type="text" 
+                    id="user-input" 
+                    class="input-field"
+                    placeholder="Ask a question about your documents..." 
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button onclick="sendMessage()" id="send-btn" class="btn btn-primary">
+                    <span id="send-icon">📤</span>
+                    <span id="send-text">Send</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="card">
+                <h3 style="margin-bottom: 1rem; color: #374151;">📊 System Status</h3>
+                <div id="system-status">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading system status...
+                    </div>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3 style="margin-bottom: 1rem; color: #374151;">📈 Performance Stats</h3>
+                <div id="stats-container">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading performance stats...
+                    </div>
+                </div>
+                <button onclick="refreshStats()" class="btn btn-secondary" style="width: 100%; margin-top: 1rem;">
+                    🔄 Refresh Stats
+                </button>
+            </div>
+            
+            <div class="card">
+                <h3 style="margin-bottom: 1rem; color: #374151;">📁 Document Processing</h3>
+                <div class="upload-area" onclick="processDocuments()">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
+                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Process Documents</div>
+                    <div style="font-size: 0.9rem; color: #6b7280;">Click to process documents from uploaded_docs folder</div>
+                </div>
+                <div id="upload-status" style="margin-top: 1rem;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

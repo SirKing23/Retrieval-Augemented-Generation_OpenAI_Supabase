@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(__file__))
 
-from RAG_Core_Optimized import OptimizedRAGSystem
+from RAG_Core import OptimizedRAGSystem
 import time
 
 def test_persistent_caching():
