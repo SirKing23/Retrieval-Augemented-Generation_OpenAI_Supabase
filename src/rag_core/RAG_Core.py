@@ -136,7 +136,11 @@ def retry_with_backoff(max_retries: int = 3, base_delay: float = 1.0):
 class PersistentCacheManager:
     """Manages persistent cache storage for embeddings and responses"""
     
-    def __init__(self, cache_dir: str = "rag_cache", max_cache_size_mb: int = 100):
+    def __init__(self, cache_dir: str = None, max_cache_size_mb: int = 100):
+        # Get cache directory from environment variable or use default
+        if cache_dir is None:
+            cache_dir = os.getenv("CACHE_DIR", "./cache")
+        
         self.cache_dir = cache_dir
         self.max_cache_size_bytes = max_cache_size_mb * 1024 * 1024
         
@@ -341,8 +345,8 @@ class RAGSystem:
         self.vector_search_match_count = self.config.vector_search_match_count
         
         # Files processing parameters
-        self.processed_files_list = "processed_files.txt"
-        
+        self.processed_files_list = os.getenv("PROCESSED_FILES_DIR", "./data/processed_files.txt")
+
         # Chat History parameters with improved management
         self.chat_history = []
         self.is_initial_session = False
@@ -353,7 +357,26 @@ class RAGSystem:
         self.session = None
         
         # Initialize persistent cache manager
-        self.cache_manager = PersistentCacheManager(cache_dir="rag_cache", max_cache_size_mb=100)
+        cache_dir = os.getenv("CACHE_DIR", "./cache/rag_cache")
+        
+        # If cache_dir is relative, make it relative to the project root
+        if not os.path.isabs(cache_dir):
+            # Find project root (directory containing .env file)
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = current_dir
+            while project_root and not os.path.exists(os.path.join(project_root, '.env')):
+                parent = os.path.dirname(project_root)
+                if parent == project_root:  # Reached filesystem root
+                    break
+                project_root = parent
+            
+            if os.path.exists(os.path.join(project_root, '.env')):
+                cache_dir = os.path.join(project_root, cache_dir.lstrip('./'))
+            else:
+                # Fallback to absolute path
+                cache_dir = os.path.abspath(cache_dir)
+        
+        self.cache_manager = PersistentCacheManager(cache_dir=cache_dir, max_cache_size_mb=100)
         
         # Keep reference to embedding cache for compatibility
         self.embedding_cache = self.cache_manager.embedding_cache

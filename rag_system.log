@@ -1,0 +1,122 @@
+2025-08-02 15:45:52,769 - PersistentCache - INFO - Loaded embedding_cache with 2 items
+2025-08-02 15:45:52,783 - PersistentCache - INFO - Loaded response_cache with 2 items
+2025-08-02 15:45:52,783 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-02 15:45:52,784 - RAGSystem - INFO - Processing 3 files
+2025-08-02 15:45:52,789 - RAGSystem - INFO - Processing file: AUTHORIZATION LETTER.docx
+2025-08-02 15:45:52,807 - RAGSystem - INFO - Processing 'AUTHORIZATION LETTER.docx' with 2 chunks
+2025-08-02 15:45:53,919 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 15:45:55,507 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:45:55,755 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:45:55,758 - RAGSystem - INFO - Processing file: DO_s2020_008-Guidelines-on-Enrollment-for-SY-2020-2021.pdf
+2025-08-02 15:45:56,644 - RAGSystem - INFO - Processing 'DO_s2020_008-Guidelines-on-Enrollment-for-SY-2020-2021.pdf' with 72 chunks
+2025-08-02 15:45:59,387 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 15:46:00,838 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:01,070 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:01,221 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:01,365 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:01,589 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:01,800 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:01,951 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:02,214 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:02,348 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:02,566 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:02,780 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:02,919 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:03,068 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:03,236 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:03,385 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:03,530 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:03,760 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:03,895 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:04,045 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:04,183 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:04,330 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:04,538 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:04,674 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:04,893 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:05,028 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:05,239 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:05,370 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:05,504 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:05,639 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:05,837 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:05,969 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:06,107 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:06,242 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:06,374 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:06,621 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:06,770 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:06,923 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:07,053 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:07,193 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:07,344 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:07,482 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:07,636 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:07,798 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:07,927 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:08,070 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:08,204 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:08,334 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:08,464 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:08,612 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:08,744 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:08,878 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:09,024 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:09,164 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:09,298 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:09,431 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:09,574 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:09,720 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:09,870 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:10,007 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:10,153 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:10,295 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:10,430 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:10,561 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:10,702 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:10,840 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:10,991 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:11,138 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:11,278 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:11,408 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:11,539 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:11,673 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:11,805 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:46:11,810 - RAGSystem - INFO - Processing file: ProductCenter_WebLink_Toolkit_Programmer_Guide.pdf
+2025-08-02 15:46:13,950 - RAGSystem - INFO - Processing 'ProductCenter_WebLink_Toolkit_Programmer_Guide.pdf' with 795 chunks
+2025-08-02 15:53:36,499 - PersistentCache - INFO - Loaded embedding_cache with 2 items
+2025-08-02 15:53:36,501 - PersistentCache - INFO - Loaded response_cache with 2 items
+2025-08-02 15:53:36,501 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-02 15:53:36,502 - RAGSystem - INFO - Processing 1 files
+2025-08-02 15:53:36,513 - RAGSystem - INFO - Processing file: ProductCenter_WebLink_Toolkit_Programmer_Guide.pdf
+2025-08-02 15:53:38,938 - RAGSystem - INFO - Processing 'ProductCenter_WebLink_Toolkit_Programmer_Guide.pdf' with 795 chunks
+2025-08-02 15:53:41,038 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-02 15:53:44,900 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:45,106 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:45,350 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:45,514 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:45,744 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:45,984 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:46,222 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:46,454 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:46,615 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:46,837 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:47,045 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:47,271 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:47,515 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:47,760 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:47,989 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:48,200 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:48,345 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:48,567 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:53:48,954 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/document_embeddings "HTTP/2 201 Created"
+2025-08-02 15:57:03,417 - PersistentCache - INFO - Loaded embedding_cache with 2 items
+2025-08-02 15:57:03,419 - PersistentCache - INFO - Loaded response_cache with 2 items
+2025-08-02 15:57:03,419 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-02 15:57:10,358 - RAGSystem - INFO - Processing 1 files
+2025-08-02 15:57:10,370 - RAGSystem - INFO - Processing file: ProductCenter_WebLink_Toolkit_Programmer_Guide.pdf
+2025-08-02 15:57:21,695 - RAGSystem - INFO - Processing 'ProductCenter_WebLink_Toolkit_Programmer_Guide.pdf' with 795 chunks
+2025-08-02 15:59:42,863 - PersistentCache - INFO - Loaded embedding_cache with 2 items
+2025-08-02 15:59:42,865 - PersistentCache - INFO - Loaded response_cache with 2 items
+2025-08-02 15:59:42,865 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-02 15:59:51,274 - RAGSystem - INFO - Processing 1 files

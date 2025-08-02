@@ -1,16 +1,70 @@
 """
-Example usage of the Optimized RAG System
-This file demonstrates how to use all the new features and optimizations.
+RAG System Terminal Interface
+Interactive command-line interface for the RAG system with the new project structure.
 """
 
 import asyncio
 import os
 import time
+import sys
+from pathlib import Path
+
+# Add the rag_core to Python path for importing
+current_dir = Path(__file__).parent.absolute()
+rag_core_path = current_dir.parent / 'rag_core'
+sys.path.insert(0, str(rag_core_path))
+
 from RAG_Core import RAGSystem, RAGSystemConfig
 
+def find_documents_folder():
+    """Find a suitable documents folder to process"""
+    possible_paths = [
+        "C:\\Users\\YourKing\\Desktop\\RAG_File_Upload",  # Default folder name
+        "documents",      # Alternative name
+        "docs",          # Another alternative
+        "data",          # If using data folder
+        "../../data",    # Relative to interface location
+    ]
+    
+    # Check each possible path
+    for path in possible_paths:
+        abs_path = Path(path).resolve()
+        if abs_path.exists() and abs_path.is_dir():
+            # Check if it contains any files
+            files = list(abs_path.glob('*'))
+            if files:
+                return str(abs_path)
+    
+    return None
+
 def basic_usage_example():
-    """Basic usage example with environment variables"""
-    print("=== Basic Usage Example ===")
+    """Basic usage example with dynamic document discovery"""
+    print("🚀 RAG System Basic Usage Demo")
+    
+    # Find documents folder automatically
+    documents_path = find_documents_folder()
+    if not documents_path:
+        print("⚠️ No documents folder found. Creating 'uploaded_docs' folder...")
+        documents_path = "uploaded_docs"
+        os.makedirs(documents_path, exist_ok=True)
+        print(f"📁 Created folder: {documents_path}")
+        print("📝 Please add some .txt, .pdf, or .docx files to this folder and run again.")
+        return
+    
+    print(f"📁 Using documents from: {documents_path}")
+    
+    # Check if folder has any documents
+    supported_extensions = ['.txt', '.pdf', '.docx']
+    docs_found = []
+    for ext in supported_extensions:
+        docs_found.extend(Path(documents_path).glob(f'*{ext}'))
+    
+    if not docs_found:
+        print(f"⚠️ No supported documents found in {documents_path}")
+        print(f"📝 Please add files with extensions: {', '.join(supported_extensions)}")
+        return
+    
+    print(f"📚 Found {len(docs_found)} documents to process")
     
     # Initialize the optimized RAG system
     # It will automatically load configuration from environment variables
@@ -18,7 +72,7 @@ def basic_usage_example():
     
     # Process some documents
     try:
-        rag_system.initialize_files("C:\\Users\\YourKing\\Desktop\\RAG_File_Upload")
+        rag_system.initialize_files(documents_path)
         print("✅ Documents processed successfully")
     except Exception as e:
         print(f"❌ Error processing documents: {e}")
