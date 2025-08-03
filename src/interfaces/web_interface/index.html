@@ -7,14 +7,132 @@
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <div class="header">
-        <h1>🤖 RAG System - Intelligent Document Search</h1>
-        <p>Ask questions about your documents with AI-powered search and caching</p>
-    </div>
-    
-    <div class="container">
-        <div class="chat-section">
-            <h2 style="margin-bottom: 1rem; color: #374151;">💬 Chat with Your Documents</h2>
+    <div class="app-layout">
+        <!-- Left Sidebar -->
+        <div class="sidebar-left">
+            <div class="sidebar-header">
+                <h2>📁 File Manager</h2>
+            </div>
+            
+            <!-- Upload Section -->
+            <div class="sidebar-section">
+                <button class="sidebar-btn upload-btn" onclick="openFileUpload()">
+                    <span class="btn-icon">📤</span>
+                    <span class="btn-text">Upload</span>
+                </button>
+                <input type="file" id="file-upload" multiple accept=".txt,.pdf,.docx,.doc" style="display: none;">
+            </div>
+            
+            <!-- Navigation Items -->
+            <div class="sidebar-nav">
+                <div class="nav-item active" onclick="showSection('files')">
+                    <span class="nav-icon">📄</span>
+                    <span class="nav-text">Files</span>
+                </div>
+                <div class="nav-item" onclick="showSection('trash')">
+                    <span class="nav-icon">🗑️</span>
+                    <span class="nav-text">Trash</span>
+                </div>
+                <div class="nav-item" onclick="showSection('statistics')">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-text">Statistics</span>
+                </div>
+            </div>
+            
+            <!-- Storage Section at Bottom -->
+            <div class="sidebar-storage">
+                <div class="storage-header">
+                    <span class="storage-icon">💾</span>
+                    <span class="storage-text">Storage</span>
+                </div>
+                <div class="storage-info">
+                    <div class="storage-bar">
+                        <div class="storage-used" style="width: 35%"></div>
+                    </div>
+                    <div class="storage-details">
+                        <span id="storage-used">350 MB</span> of <span id="storage-total">1 GB</span> used
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header">
+                <h1>🤖 RAG System - Intelligent Document Search</h1>
+                <p>Ask questions about your documents with AI-powered search and caching</p>
+            </div>
+            
+            <!-- Content Sections -->
+            <div class="content-sections">
+                <!-- Files Section -->
+                <div id="files-section" class="content-section active">
+                    <div class="section-header">
+                        <h2>📁 Your Documents</h2>
+                        <button class="btn btn-secondary" onclick="refreshFiles()">🔄 Refresh</button>
+                    </div>
+                    <div id="files-list" class="files-grid">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            Loading files...
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Trash Section -->
+                <div id="trash-section" class="content-section">
+                    <div class="section-header">
+                        <h2>🗑️ Deleted Files</h2>
+                        <button class="btn btn-secondary" onclick="emptyTrash()">🗑️ Empty Trash</button>
+                    </div>
+                    <div id="trash-list" class="files-grid">
+                        <div class="empty-state">
+                            <div class="empty-icon">🗑️</div>
+                            <div class="empty-text">No deleted files</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Statistics Section -->
+                <div id="statistics-section" class="content-section">
+                    <div class="section-header">
+                        <h2>📊 System Statistics</h2>
+                        <button class="btn btn-secondary" onclick="refreshStats()">🔄 Refresh</button>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">🔄</div>
+                            <div class="stat-value" id="api-calls">0</div>
+                            <div class="stat-label">API Calls</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⚡</div>
+                            <div class="stat-value" id="cache-hits">0</div>
+                            <div class="stat-label">Cache Hits</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📚</div>
+                            <div class="stat-value" id="documents-processed">0</div>
+                            <div class="stat-label">Documents</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⏱️</div>
+                            <div class="stat-value" id="avg-response-time">0ms</div>
+                            <div class="stat-label">Avg Response Time</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Chat Section -->
+        <div class="chat-panel">
+            <div class="chat-header">
+                <h3>💬 Chat with Your Documents</h3>
+                <button class="btn btn-secondary btn-sm" onclick="clearChat()">🗑️ Clear</button>
+            </div>
+            
             <div id="chat-messages" class="chat-messages">
                 <div class="message assistant">
                     <div class="message-header">
@@ -25,7 +143,8 @@
                     </div>
                 </div>
             </div>
-            <div class="input-section">
+            
+            <div class="chat-input">
                 <input 
                     type="text" 
                     id="user-input" 
@@ -37,41 +156,6 @@
                     <span id="send-icon">📤</span>
                     <span id="send-text">Send</span>
                 </button>
-            </div>
-        </div>
-        
-        <div class="sidebar">
-            <div class="card">
-                <h3 style="margin-bottom: 1rem; color: #374151;">📊 System Status</h3>
-                <div id="system-status">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Loading system status...
-                    </div>
-                </div>
-            </div>
-            
-            <div class="card">
-                <h3 style="margin-bottom: 1rem; color: #374151;">📈 Performance Stats</h3>
-                <div id="stats-container">
-                    <div class="loading">
-                        <div class="spinner"></div>
-                        Loading performance stats...
-                    </div>
-                </div>
-                <button onclick="refreshStats()" class="btn btn-secondary" style="width: 100%; margin-top: 1rem;">
-                    🔄 Refresh Stats
-                </button>
-            </div>
-            
-            <div class="card">
-                <h3 style="margin-bottom: 1rem; color: #374151;">📁 Document Processing</h3>
-                <div class="upload-area" onclick="processDocuments()">
-                    <div style="font-size: 2rem; margin-bottom: 0.5rem;">📄</div>
-                    <div style="font-weight: 600; margin-bottom: 0.5rem;">Process Documents</div>
-                    <div style="font-size: 0.9rem; color: #6b7280;">Click to process documents from uploaded_docs folder</div>
-                </div>
-                <div id="upload-status" style="margin-top: 1rem;"></div>
             </div>
         </div>
     </div>

@@ -19,11 +19,7 @@ from RAG_Core import RAGSystem, RAGSystemConfig
 def find_documents_folder():
     """Find a suitable documents folder to process"""
     possible_paths = [
-        "C:\\Users\\YourKing\\Desktop\\RAG_File_Upload",  # Default folder name
-        "documents",      # Alternative name
-        "docs",          # Another alternative
-        "data",          # If using data folder
-        "../../data",    # Relative to interface location
+        os.getenv("DOCUMENTS_DIR") 
     ]
     
     # Check each possible path

@@ -76,25 +76,29 @@ def check_documents_folder():
     """Check if documents folder exists"""
     print("\n🔍 Checking documents folder...")
     
-    docs_folder = Path("C:\\Users\\YourKing\\Desktop\\RAG_File_Upload")
+    # Get documents directory from environment variable
+    documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+    docs_folder = Path(documents_dir)
+    
+    print(f"📁 Looking for documents in: {docs_folder}")
+    
     if docs_folder.exists():
         doc_files = list(docs_folder.glob("*.pdf")) + list(docs_folder.glob("*.txt")) + list(docs_folder.glob("*.docx"))
-        print(f"✅ uploaded_docs folder exists with {len(doc_files)} documents")
-        
         if doc_files:
+            print(f"✅ {docs_folder} folder exists with {len(doc_files)} documents")
             print("📄 Documents found:")
             for doc in doc_files[:5]:  # Show first 5
                 print(f"   - {doc.name}")
             if len(doc_files) > 5:
                 print(f"   ... and {len(doc_files) - 5} more")
         else:
-            print("⚠️  No documents found in uploaded_docs folder")
-            print("Add PDF, TXT, or DOCX files to the uploaded_docs folder")
+            print(f"⚠️ {docs_folder} folder exists but no documents found")
+            print("📄 Add your documents (PDF, TXT, DOCX) to this folder")
     else:
-        print("❌ uploaded_docs folder not found")
-        print("Creating uploaded_docs folder...")
-        docs_folder.mkdir(exist_ok=True)
-        print("✅ Created uploaded_docs folder")
+        print(f"❌ Documents folder not found: {docs_folder}")
+        print("Creating documents folder...")
+        docs_folder.mkdir(parents=True, exist_ok=True)
+        print(f"✅ Created documents folder: {docs_folder}")
         print("📄 Add your documents (PDF, TXT, DOCX) to this folder")
 
 def start_server():
@@ -102,11 +106,16 @@ def start_server():
     print("\n🚀 Starting RAG System Web Interface...")
     print("=" * 50)
     
+    # Make sure we're in the project root directory
+    project_root = Path(__file__).parent.parent.parent
+    os.chdir(project_root)
+    print(f"📁 Working directory: {project_root}")
+    
     try:
         # Start the server
         process = subprocess.Popen([
             sys.executable, "-m", "uvicorn", 
-            "rag_webapp:app", 
+            "src.server.rag_webapp:app", 
             "--host", "0.0.0.0", 
             "--port", "8000", 
             "--reload"
@@ -127,7 +136,8 @@ def start_server():
         print("📚 API Documentation: http://localhost:8000/api/docs")
         print("🔧 Alternative Docs: http://localhost:8000/api/redoc")
         print("\n💡 Tips:")
-        print("   - Upload documents to the 'uploaded_docs' folder")
+        documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+        print(f"   - Upload documents to the '{documents_dir}' folder")
         print("   - Use the 'Process Documents' button to index new files")
         print("   - Ask questions about your documents in the chat")
         print("   - Monitor performance in the sidebar")
@@ -150,8 +160,12 @@ def main():
     print("🤖 RAG System Web Interface Startup")
     print("=" * 50)
     
+    # Make sure we're in the project root directory
+    project_root = Path(__file__).parent.parent.parent
+    os.chdir(project_root)
+    
     # Check if RAG_Core.py exists
-    rag_core_path = Path("../rag_core/RAG_Core.py")
+    rag_core_path = Path("src/rag_core/RAG_Core.py")
     if not rag_core_path.exists():
         print("❌ RAG_Core.py not found!")
         print("Make sure the RAG core module is in the correct location")
@@ -164,7 +178,7 @@ def main():
     
     if not requirements_ok:
         print("\n❌ Please install missing requirements first:")
-        print("pip install -r ../../requirements/web_requirements.txt")
+        print("pip install -r requirements/web_requirements.txt")
         return
     
     if not env_vars_ok:

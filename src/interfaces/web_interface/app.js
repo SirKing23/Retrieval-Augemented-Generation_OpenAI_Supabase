@@ -1,14 +1,217 @@
 let sessionId = 'session_' + Math.random().toString(36).substr(2, 12);
 let messageCounter = 0;
+let currentSection = 'files';
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
     refreshStats();
+    loadFiles();
     checkSystemHealth();
     setInterval(refreshStats, 30000); // Auto-refresh every 30 seconds
     setInterval(checkSystemHealth, 60000); // Check health every minute
+    
+    // Initialize file upload handler
+    const fileUpload = document.getElementById('file-upload');
+    if (fileUpload) {
+        fileUpload.addEventListener('change', handleFileUpload);
+    }
 });
 
+// Section Navigation
+function showSection(sectionName) {
+    // Update navigation
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`[onclick="showSection('${sectionName}')"]`).classList.add('active');
+    
+    // Update content sections
+    document.querySelectorAll('.content-section').forEach(section => {
+        section.classList.remove('active');
+    });
+    document.getElementById(`${sectionName}-section`).classList.add('active');
+    
+    currentSection = sectionName;
+    
+    // Load section-specific data
+    switch(sectionName) {
+        case 'files':
+            loadFiles();
+            break;
+        case 'trash':
+            loadTrash();
+            break;
+        case 'statistics':
+            refreshStats();
+            break;
+    }
+}
+
+// File Upload Functions
+function openFileUpload() {
+    document.getElementById('file-upload').click();
+}
+
+async function handleFileUpload(event) {
+    const files = event.target.files;
+    if (files.length === 0) return;
+    
+    const formData = new FormData();
+    for (let file of files) {
+        formData.append('files', file);
+    }
+    
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        if (response.ok) {
+            showNotification('Files uploaded successfully!', 'success');
+            loadFiles(); // Refresh file list
+        } else {
+            showNotification('Upload failed!', 'error');
+        }
+    } catch (error) {
+        showNotification('Upload error: ' + error.message, 'error');
+    }
+}
+
+async function loadFiles() {
+    const container = document.getElementById('files-list');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading files...</div>';
+    
+    try {
+        const response = await fetch('/api/files');
+        const files = await response.json();
+        
+        if (files.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">📁</div>
+                    <div class="empty-text">No files uploaded yet</div>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = files.map(file => `
+            <div class="file-card" onclick="selectFile('${file.id}')">
+                <div class="file-icon">${getFileIcon(file.type)}</div>
+                <div class="file-name">${file.name}</div>
+                <div class="file-details">
+                    <div>${formatFileSize(file.size)}</div>
+                    <div>${formatDate(file.uploaded)}</div>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">❌</div>
+                <div class="empty-text">Error loading files</div>
+            </div>
+        `;
+    }
+}
+
+async function loadTrash() {
+    const container = document.getElementById('trash-list');
+    container.innerHTML = '<div class="loading"><div class="spinner"></div>Loading deleted files...</div>';
+    
+    try {
+        const response = await fetch('/api/trash');
+        const files = await response.json();
+        
+        if (files.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-icon">🗑️</div>
+                    <div class="empty-text">No deleted files</div>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = files.map(file => `
+            <div class="file-card">
+                <div class="file-icon">${getFileIcon(file.type)}</div>
+                <div class="file-name">${file.name}</div>
+                <div class="file-details">
+                    <div>${formatFileSize(file.size)}</div>
+                    <div>Deleted: ${formatDate(file.deleted)}</div>
+                </div>
+                <div style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary btn-sm" onclick="restoreFile('${file.id}')">
+                        🔄 Restore
+                    </button>
+                    <button class="btn btn-secondary btn-sm" onclick="permanentDelete('${file.id}')">
+                        🗑️ Delete
+                    </button>
+                </div>
+            </div>
+        `).join('');
+    } catch (error) {
+        container.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-icon">❌</div>
+                <div class="empty-text">Error loading trash</div>
+            </div>
+        `;
+    }
+}
+
+// Utility Functions
+function getFileIcon(fileType) {
+    const icons = {
+        'pdf': '📄',
+        'txt': '📝',
+        'docx': '📄',
+        'doc': '📄',
+        'default': '📄'
+    };
+    return icons[fileType] || icons.default;
+}
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function formatDate(dateString) {
+    return new Date(dateString).toLocaleDateString();
+}
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+        color: white;
+        border-radius: 8px;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.remove();
+    }, 3000);
+}
+
+// Chat Functions
 async function sendMessage() {
     const input = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
@@ -125,40 +328,72 @@ async function refreshStats() {
         const response = await fetch('/api/stats');
         const stats = await response.json();
         
-        const container = document.getElementById('stats-container');
-        const cachePerf = stats.cache_performance || {};
-        const apiStats = stats.api_call_statistics || {};
+        // Update statistics in the statistics section
+        const apiCallsElem = document.getElementById('api-calls');
+        const cacheHitsElem = document.getElementById('cache-hits');
+        const documentsElem = document.getElementById('documents-processed');
+        const responseTimeElem = document.getElementById('avg-response-time');
         
-        container.innerHTML = `
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <div class="stat-value">${cachePerf.embedding_cache?.hit_rate_percentage || 0}%</div>
-                    <div class="stat-label">Embedding Cache</div>
+        if (apiCallsElem) apiCallsElem.textContent = stats.api_call_statistics?.total_openai_calls || 0;
+        if (cacheHitsElem) cacheHitsElem.textContent = stats.cache_performance?.overall_cache_efficiency?.total_api_calls_saved || 0;
+        if (documentsElem) documentsElem.textContent = stats.documents_processed || 0;
+        if (responseTimeElem) responseTimeElem.textContent = stats.avg_response_time ? `${stats.avg_response_time.toFixed(0)}ms` : '0ms';
+        
+        // Update storage information
+        if (stats.cache_storage) {
+            const usedMB = stats.cache_storage.total_cache_size_mb || 0;
+            const totalMB = 1000; // 1GB limit
+            const usedPercentage = (usedMB / totalMB * 100).toFixed(1);
+            
+            const storageUsedBar = document.querySelector('.storage-used');
+            const storageUsedText = document.getElementById('storage-used');
+            const storageTotalText = document.getElementById('storage-total');
+            
+            if (storageUsedBar) storageUsedBar.style.width = `${usedPercentage}%`;
+            if (storageUsedText) storageUsedText.textContent = `${usedMB.toFixed(1)} MB`;
+            if (storageTotalText) storageTotalText.textContent = `${totalMB} MB`;
+        }
+
+        // Legacy support for the old stats container if it exists
+        const container = document.getElementById('stats-container');
+        if (container) {
+            const cachePerf = stats.cache_performance || {};
+            const apiStats = stats.api_call_statistics || {};
+            
+            container.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">${cachePerf.embedding_cache?.hit_rate_percentage || 0}%</div>
+                        <div class="stat-label">Embedding Cache</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${cachePerf.response_cache?.hit_rate_percentage || 0}%</div>
+                        <div class="stat-label">Response Cache</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${apiStats.total_openai_calls || 0}</div>
+                        <div class="stat-label">API Calls</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${cachePerf.overall_cache_efficiency?.total_api_calls_saved || 0}</div>
+                        <div class="stat-label">Calls Saved</div>
+                    </div>
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value">${cachePerf.response_cache?.hit_rate_percentage || 0}%</div>
-                    <div class="stat-label">Response Cache</div>
+                <div style="font-size: 0.8rem; color: #6b7280; text-align: center; margin-top: 0.5rem;">
+                    Cache Size: ${(stats.cache_storage?.total_cache_size_mb || 0).toFixed(1)} MB
                 </div>
-                <div class="stat-item">
-                    <div class="stat-value">${apiStats.total_openai_calls || 0}</div>
-                    <div class="stat-label">API Calls</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-value">${cachePerf.overall_cache_efficiency?.total_api_calls_saved || 0}</div>
-                    <div class="stat-label">Calls Saved</div>
-                </div>
-            </div>
-            <div style="font-size: 0.8rem; color: #6b7280; text-align: center; margin-top: 0.5rem;">
-                Cache Size: ${(stats.cache_storage?.total_cache_size_mb || 0).toFixed(1)} MB
-            </div>
-        `;
+            `;
+        }
     } catch (error) {
         console.error('Error refreshing stats:', error);
-        document.getElementById('stats-container').innerHTML = `
-            <div style="color: #ef4444; text-align: center;">
-                ❌ Error loading stats
-            </div>
-        `;
+        const container = document.getElementById('stats-container');
+        if (container) {
+            container.innerHTML = `
+                <div style="color: #ef4444; text-align: center;">
+                    ❌ Error loading stats
+                </div>
+            `;
+        }
     }
 }
 
@@ -239,4 +474,102 @@ function handleKeyPress(event) {
         event.preventDefault();
         sendMessage();
     }
+}
+
+// Additional functions for the new interface
+
+function clearChat() {
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.innerHTML = `
+        <div class="message assistant">
+            <div class="message-header">🤖 Assistant</div>
+            <div class="message-content">
+                Welcome! I can help you find information from your documents. Ask me anything about the uploaded documents.
+            </div>
+        </div>
+    `;
+    messageCounter = 0;
+}
+
+// File Management Functions
+async function selectFile(fileId) {
+    console.log('Selected file:', fileId);
+    // Implement file selection logic - could highlight file or show preview
+}
+
+async function deleteFile(fileId) {
+    try {
+        const response = await fetch(`/api/files/${fileId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('File moved to trash', 'success');
+            loadFiles();
+        } else {
+            showNotification('Failed to delete file', 'error');
+        }
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+async function restoreFile(fileId) {
+    try {
+        const response = await fetch(`/api/trash/${fileId}/restore`, {
+            method: 'POST'
+        });
+        
+        if (response.ok) {
+            showNotification('File restored successfully', 'success');
+            loadTrash();
+            if (currentSection === 'files') loadFiles();
+        } else {
+            showNotification('Failed to restore file', 'error');
+        }
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+async function permanentDelete(fileId) {
+    if (!confirm('Are you sure you want to permanently delete this file?')) return;
+    
+    try {
+        const response = await fetch(`/api/trash/${fileId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('File permanently deleted', 'success');
+            loadTrash();
+        } else {
+            showNotification('Failed to delete file', 'error');
+        }
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+async function emptyTrash() {
+    if (!confirm('Are you sure you want to empty the trash? This cannot be undone.')) return;
+    
+    try {
+        const response = await fetch('/api/trash', {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            showNotification('Trash emptied successfully', 'success');
+            loadTrash();
+        } else {
+            showNotification('Failed to empty trash', 'error');
+        }
+    } catch (error) {
+        showNotification('Error: ' + error.message, 'error');
+    }
+}
+
+async function refreshFiles() {
+    loadFiles();
 }
