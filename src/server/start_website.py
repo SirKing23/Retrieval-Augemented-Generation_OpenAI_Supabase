@@ -190,11 +190,11 @@ def main():
     
     # Ask user if they want to continue
     try:
-        response = input("\n▶️  Start the web server? (y/n): ").lower().strip()
-        if response in ['y', 'yes', '']:
-            start_server()
-        else:
-            print("👋 Startup cancelled")
+       # response = input("\n▶️  Start the web server? (y/n): ").lower().strip()
+      #  if response in ['y', 'yes', '']:
+        start_server()
+      #  else:
+      #      print("👋 Startup cancelled")
     except KeyboardInterrupt:
         print("\n👋 Startup cancelled")
 

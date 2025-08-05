@@ -70,6 +70,11 @@ app.add_middleware(
 web_interface_path = os.path.join(os.path.dirname(__file__), '..', 'interfaces', 'web_interface')
 app.mount("/static", StaticFiles(directory=web_interface_path), name="static")
 
+# Mount documents directory for file access
+documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+if os.path.exists(documents_dir):
+    app.mount("/documents", StaticFiles(directory=documents_dir), name="documents")
+
 # Global variables
 rag_system: Optional[RAGSystem] = None
 active_sessions: Dict[str, Dict] = {}
@@ -192,6 +197,90 @@ async def upload_documents(request: UploadRequest, background_tasks: BackgroundT
         
     except Exception as e:
         logger.error(f"Error processing documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/upload-file")
+async def upload_file(file: UploadFile = File(...)):
+    """Upload a single file to the documents directory without processing"""
+    try:
+        # Get documents directory from environment
+        documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+        docs_path = Path(documents_dir)
+        
+        # Create directory if it doesn't exist
+        docs_path.mkdir(parents=True, exist_ok=True)
+        
+        # Validate file type
+        allowed_extensions = {'.pdf', '.txt', '.docx', '.doc'}
+        file_extension = Path(file.filename).suffix.lower()
+        
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"
+            )
+        
+        # Save file to documents directory
+        file_path = docs_path / file.filename
+        
+        # Check if file already exists
+        if file_path.exists():
+            # Generate unique filename
+            stem = file_path.stem
+            suffix = file_path.suffix
+            counter = 1
+            while file_path.exists():
+                file_path = docs_path / f"{stem}_{counter}{suffix}"
+                counter += 1
+        
+        # Write file to disk
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        logger.info(f"File uploaded successfully: {file_path}")
+        
+        return {
+            "message": f"File '{file.filename}' uploaded successfully",
+            "filename": file_path.name,
+            "size": len(content),
+            "path": str(file_path),
+            "processed": False
+        }
+        
+    except Exception as e:
+        logger.error(f"Error uploading file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/files")
+async def get_files():
+    """Get list of processed files"""
+    try:
+        # Get documents directory from environment
+        documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+        docs_path = Path(documents_dir)
+        
+        files = []
+        if docs_path.exists():
+            for file_path in docs_path.glob("*"):
+                if file_path.is_file() and file_path.suffix.lower() in ['.pdf', '.txt', '.docx', '.doc']:
+                    stat = file_path.stat()
+                    files.append({
+                        "id": str(file_path.stem),
+                        "name": file_path.name,
+                        "type": file_path.suffix.lower().replace('.', ''),
+                        "size": stat.st_size,
+                        "uploaded": time.ctime(stat.st_ctime),
+                        "path": str(file_path)
+                    })
+        
+        # Sort by upload time (newest first)
+        files.sort(key=lambda x: x['uploaded'], reverse=True)
+        
+        return files
+    
+    except Exception as e:
+        logger.error(f"Error getting files: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/stats", response_model=SystemStats)
