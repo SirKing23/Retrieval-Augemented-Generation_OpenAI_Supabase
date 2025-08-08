@@ -163,7 +163,9 @@ async def ask_question(request: QuestionRequest):
         logger.error(f"Error processing question: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/upload", response_model=UploadResponse)
+# API call for processing documents in a directory - if the document is already in the processed files,
+# it will not be re-processed
+@app.post("/api/processFiles", response_model=UploadResponse)
 async def upload_documents(request: UploadRequest, background_tasks: BackgroundTasks):
     """Process documents in specified directory"""
     try:
@@ -199,6 +201,7 @@ async def upload_documents(request: UploadRequest, background_tasks: BackgroundT
         logger.error(f"Error processing documents: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+#API call for uploading a single file to directory without processing for embedding
 @app.post("/api/upload-file")
 async def upload_file(file: UploadFile = File(...)):
     """Upload a single file to the documents directory without processing"""
@@ -389,7 +392,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     except Exception as e:
         logger.error(f"WebSocket error for session {session_id}: {e}")
         await websocket.close()
-        
+
 #API call for deleting a file in the directory
 @app.delete("/api/delete-file/{file_id}")
 async def delete_file(file_id: str):
