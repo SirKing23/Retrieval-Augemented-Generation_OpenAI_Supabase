@@ -528,21 +528,66 @@ class RAGSystem:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.generate_embedding, text)
 
-    def delete_embeddings_for_file(self, file_id: str) -> bool:
-        """Delete all embeddings associated with a file (by stem) from Supabase and cache."""
+    def delete_file_embeddings(self, file_id: str) -> bool:
+        """Delete all embeddings associated with a file (by stem) from Supabase."""
         try:
             # Delete from Supabase
             delete_response = self.supabase.table("document_embeddings").delete().eq("filename", file_id).execute()
             deleted_count = getattr(delete_response, "count", None)
-            # Optionally, clear from cache if you store by file_id
-            # If you have a mapping of text_hashes for this file, remove them from cache_manager
-            # For now, just log the deletion
             self.logger.logger.info(f"Deleted embeddings for file_id '{file_id}' from Supabase. Rows deleted: {deleted_count}")
             return True
         except Exception as e:
             self.logger.log_error(e, f"delete_embeddings_for_file: {file_id}")
             return False
         
+    def delete_file_cache(self, filename: str) -> bool:
+        """ Delete all cache entries (responses) related to a file that has been deleted.  """
+        try:
+            # Remove embeddings from persistent cache
+            keys_to_remove = [
+                key for key, embedding in self.cache_manager.embedding_cache.items()
+                if filename in key  # If you store hashes with filename info, adjust this logic
+            ]
+            for key in keys_to_remove:
+                del self.cache_manager.embedding_cache[key]
+
+            # Optionally, remove responses from cache if they reference the file
+            response_keys_to_remove = []
+            for key, entry in self.cache_manager.response_cache.items():
+                sources = entry.get("response", {}).get("sources", [])
+                if any(filename == src.get("filename") for src in sources):
+                    response_keys_to_remove.append(key)
+            for key in response_keys_to_remove:
+                del self.cache_manager.response_cache[key]
+
+            # Save updated caches to disk
+            self.cache_manager.save_to_disk()
+            self.logger.logger.info(f"Deleted cache for file '{filename}' successfully")
+            return True
+        except Exception as e:
+            self.logger.log_error(e, f"delete_file_cache: {filename}")
+            return False
+
+    def delete_file_from_documents_dir(self, filename: str) -> bool:
+        """Delete a file from the DOCUMENTS_DIR using the filename parameter."""
+        try:
+            documents_dir = os.getenv("DOCUMENTS_DIR", "./data/documents")
+            file_path = os.path.join(documents_dir, filename)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+                self.logger.logger.info(f"Deleted file '{filename}' from DOCUMENTS_DIR successfully")
+                return True
+            else:
+                self.logger.logger.warning(f"File '{filename}' not found in DOCUMENTS_DIR")
+                return False
+        except Exception as e:
+            self.logger.log_error(e, f"delete_file_from_documents_dir: {filename}")
+            return False
+
+    def get_knowledge_base_directory(self) -> str:
+        """Get the directory containing the knowledge base documents."""
+        return os.getenv("DOCUMENTS_DIR", "./data/documents")
+
     def _manage_context_window(self, context: str, max_tokens: int = 3000) -> str:
         """Truncate context if it exceeds token limits"""
         try:
@@ -1063,7 +1108,8 @@ class RAGSystem:
         else:
             self.logger.logger.error("Failed to save cache")
         return success
-    
+
+   
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get comprehensive cache statistics"""
         return self.get_performance_report()["cache_statistics"]

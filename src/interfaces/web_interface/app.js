@@ -643,7 +643,7 @@ class RAGApp {
         try {
             this.showLoading(true);
             
-            const response = await fetch('/api/processFiles', {
+            const response = await fetch('/api/process-uploaded-files', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

@@ -165,7 +165,7 @@ async def ask_question(request: QuestionRequest):
 
 # API call for processing documents in a directory - if the document is already in the processed files,
 # it will not be re-processed
-@app.post("/api/processFiles", response_model=UploadResponse)
+@app.post("/api/process-uploaded-files", response_model=UploadResponse)
 async def upload_documents(request: UploadRequest, background_tasks: BackgroundTasks):
     """Process documents in specified directory"""
     try:
@@ -396,22 +396,29 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 #API call for deleting a file in the directory
 @app.delete("/api/delete-file/{file_id}")
 async def delete_file(file_id: str):
-    """Delete a file from the documents directory by file_id (stem)"""
+    """Delete a file from the documents directory by file_id"""
     try:
-        documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+        rag = get_rag_system()
+        # Resolve full filename from file_id (stem)
+        documents_dir =rag.get_knowledge_base_directory()
         docs_path = Path(documents_dir)
-        # Find file by stem (file_id)
-        target_file = None
+        full_filename = None
         for file_path in docs_path.glob("*"):
             if file_path.is_file() and file_path.stem == file_id:
-                target_file = file_path
+                full_filename = file_path.name
                 break
-        if not target_file:
+
+        if not full_filename:
             raise HTTPException(status_code=404, detail=f"File with id '{file_id}' not found")
-        # Delete the file
-        target_file.unlink() # Actual deletion of the file
-        logger.info(f"File deleted successfully: {target_file}")
-        return {"message": f"File '{target_file.name}' deleted successfully", "file_id": file_id}
+        
+        isFileDeleted = rag.delete_file_from_documents_dir(full_filename)
+
+        if not isFileDeleted:
+            raise HTTPException(status_code=404, detail=f"File '{full_filename}' could not be deleted")
+        
+        logger.info(f"File deleted successfully: {full_filename}")
+
+        return isFileDeleted
     except Exception as e:
         logger.error(f"Error deleting file: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -422,7 +429,7 @@ async def delete_embeddings(file_id: str):
     """Delete embeddings associated with a file by file_id (stem)"""
     try:
         rag = get_rag_system()      
-        deleted = rag.delete_embeddings_for_file(file_id)
+        deleted = rag.delete_file_embeddings(file_id)
         if deleted:
             logger.info(f"Embeddings deleted for file_id: {file_id}")
             return {"message": f"Embeddings for file '{file_id}' deleted successfully", "file_id": file_id}
