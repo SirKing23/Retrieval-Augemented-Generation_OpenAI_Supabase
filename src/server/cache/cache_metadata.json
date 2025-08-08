@@ -1,8 +1,8 @@
 {
-  "last_saved": "2025-08-05T21:49:24.541265",
-  "embedding_cache_size": 9,
-  "response_cache_size": 6,
-  "embedding_file_size_bytes": 124810,
-  "response_file_size_bytes": 23156,
-  "total_size_bytes": 147966
+  "last_saved": "2025-08-08T16:51:49.640394",
+  "embedding_cache_size": 16,
+  "response_cache_size": 7,
+  "embedding_file_size_bytes": 221883,
+  "response_file_size_bytes": 26747,
+  "total_size_bytes": 248630
 }

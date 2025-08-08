@@ -389,6 +389,47 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     except Exception as e:
         logger.error(f"WebSocket error for session {session_id}: {e}")
         await websocket.close()
+        
+#API call for deleting a file in the directory
+@app.delete("/api/delete-file/{file_id}")
+async def delete_file(file_id: str):
+    """Delete a file from the documents directory by file_id (stem)"""
+    try:
+        documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+        docs_path = Path(documents_dir)
+        # Find file by stem (file_id)
+        target_file = None
+        for file_path in docs_path.glob("*"):
+            if file_path.is_file() and file_path.stem == file_id:
+                target_file = file_path
+                break
+        if not target_file:
+            raise HTTPException(status_code=404, detail=f"File with id '{file_id}' not found")
+        # Delete the file
+        target_file.unlink() # Actual deletion of the file
+        logger.info(f"File deleted successfully: {target_file}")
+        return {"message": f"File '{target_file.name}' deleted successfully", "file_id": file_id}
+    except Exception as e:
+        logger.error(f"Error deleting file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+#API call for deleting embeddings associated with a file
+@app.delete("/api/delete-embeddings/{file_id}")
+async def delete_embeddings(file_id: str):
+    """Delete embeddings associated with a file by file_id (stem)"""
+    try:
+        rag = get_rag_system()      
+        deleted = rag.delete_embeddings_for_file(file_id)
+        if deleted:
+            logger.info(f"Embeddings deleted for file_id: {file_id}")
+            return {"message": f"Embeddings for file '{file_id}' deleted successfully", "file_id": file_id}
+        else:
+            raise HTTPException(status_code=404, detail=f"No embeddings found for file id '{file_id}'")
+    except Exception as e:
+        logger.error(f"Error deleting embeddings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    
 
 if __name__ == "__main__":
     import uvicorn

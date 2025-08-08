@@ -154,6 +154,7 @@ class RAGApp {
         await this.loadDocuments();
     }
 
+    //Dashboard Click
     async loadDashboardData() {
         try {
             const [statsResponse, healthResponse] = await Promise.all([
@@ -172,12 +173,7 @@ class RAGApp {
                 this.updateSystemStatus(health.status === 'healthy');
             }
 
-            const docCountBadge = document.getElementById('doc-count');
-            const value = docCountBadge.textContent;
-            alert(value);
-            if (docCountBadge) {
-                docCountBadge.textContent = value;
-            }
+            
         } catch (error) {
             console.error('Error loading dashboard data:', error);
             this.showNotification('Error loading dashboard data', 'error');
@@ -188,7 +184,7 @@ class RAGApp {
         // Update document count
         const docCount = stats.system_health?.cache_storage?.total_files || 0;
         document.getElementById('total-documents').textContent = docCount;
-        document.getElementById('doc-count').textContent = docCount;
+
 
         // Update query count
         const queryCount = stats.api_call_statistics?.total_questions || 0;
@@ -247,12 +243,7 @@ class RAGApp {
 
     displayDocuments(files) {
         const container = document.getElementById('documents-list');
-        // Update the document count badge to match the number of files
-        const docCountBadge = document.getElementById('doc-count');
-        if (docCountBadge) {
-            docCountBadge.textContent = files.length;
-        }
-        
+               
         if (files.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
@@ -290,7 +281,7 @@ class RAGApp {
                         </button>
                         <button class="document-btn" onclick="ragApp.deleteDocument('${file.id}')" title="Delete">
                             <i class="fas fa-trash"></i>
-                        </button>
+                     
                     </div>
                 </div>
             `;
@@ -781,11 +772,37 @@ class RAGApp {
         this.sendChatMessage();
     }
 
-    deleteDocument(fileId) {
-        if (confirm('Are you sure you want to delete this document?')) {
-            this.showNotification(`Document ${fileId} deleted`, 'success');
-            // Implement delete functionality
-            this.loadDocuments();
+    async deleteDocument(fileId) {
+        if (!confirm('Are you sure you want to delete this document?')) return;
+
+        try {
+            // Delete the file from DOCUMENTS_DIR via API
+            const fileDeleteResponse = await fetch(`/api/delete-file/${encodeURIComponent(fileId)}`, {
+                method: 'DELETE'
+            });
+
+            if (fileDeleteResponse.ok) {
+                this.showNotification(`Document ${fileId} deleted`, 'success');
+                this.loadDocuments();
+
+                // Ask if user wants to delete vector embeddings
+                if (confirm('Do you also want to delete the vector embeddings associated with this document?')) {
+                    const embeddingDeleteResponse = await fetch(`/api/delete-embeddings/${encodeURIComponent(fileId)}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (embeddingDeleteResponse.ok) {
+                        this.showNotification('Vector embeddings deleted successfully', 'success');
+                    } else {
+                        this.showNotification('Failed to delete vector embeddings', 'error');
+                    }
+                }
+            } else {
+                this.showNotification('Failed to delete document', 'error');
+            }
+        } catch (error) {
+            console.error('Error deleting document:', error);
+            this.showNotification('Error deleting document', 'error');
         }
     }
 

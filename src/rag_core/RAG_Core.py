@@ -528,6 +528,21 @@ class RAGSystem:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.generate_embedding, text)
 
+    def delete_embeddings_for_file(self, file_id: str) -> bool:
+        """Delete all embeddings associated with a file (by stem) from Supabase and cache."""
+        try:
+            # Delete from Supabase
+            delete_response = self.supabase.table("document_embeddings").delete().eq("filename", file_id).execute()
+            deleted_count = getattr(delete_response, "count", None)
+            # Optionally, clear from cache if you store by file_id
+            # If you have a mapping of text_hashes for this file, remove them from cache_manager
+            # For now, just log the deletion
+            self.logger.logger.info(f"Deleted embeddings for file_id '{file_id}' from Supabase. Rows deleted: {deleted_count}")
+            return True
+        except Exception as e:
+            self.logger.log_error(e, f"delete_embeddings_for_file: {file_id}")
+            return False
+        
     def _manage_context_window(self, context: str, max_tokens: int = 3000) -> str:
         """Truncate context if it exceeds token limits"""
         try:
@@ -1108,3 +1123,5 @@ class RAGSystem:
                 self.save_cache()
         except:
             pass  # Ignore errors during destruction
+
+    
