@@ -9,7 +9,7 @@ Optimized RAG System with comprehensive improvements including:
 - Configuration management
 """
 
-from openai import OpenAI
+import requests
 import os
 from supabase import create_client, Client
 from PyPDF2 import PdfReader
@@ -51,22 +51,22 @@ class PerformanceMetrics:
 class RAGSystemConfig:
     """Configuration management class"""
     def __init__(self):
-        self.ai_api_key = os.getenv("OPENAI_API_KEY")
         self.supabase_url = os.getenv("SUPABASE_URL")
         self.supabase_key = os.getenv("SUPABASE_KEY")
-        self.main_model = os.getenv("MAIN_MODEL", "gpt-4o-mini")
-        self.embedding_model = os.getenv("EMBEDDING_MODEL", "text-embedding-3-small")
+        # Ollama configuration
+        self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        self.embedding_model = os.getenv("EMBEDDING_MODEL", "nomic-embed-text:latest")
+        self.chat_model = os.getenv("CHAT_MODEL", "deepseek-r1:8b")
         self.max_token_response = int(os.getenv("MAX_TOKEN_RESPONSE", "700"))
-        self.vector_search_threshold = float(os.getenv("VECTOR_SEARCH_THRESHOLD", "0.5"))
-        self.vector_search_match_count = int(os.getenv("VECTOR_SEARCH_MATCH_COUNT", "3"))
+        self.vector_search_threshold = float(os.getenv("VECTOR_SEARCH_THRESHOLD", "0.7"))
+        self.vector_search_match_count = int(os.getenv("VECTOR_SEARCH_MATCH_COUNT", "5"))
         self.max_chunk_tokens = int(os.getenv("MAX_CHUNK_TOKENS", "600"))
         self.overlap_chunk_tokens = int(os.getenv("OVERLAP_CHUNK_TOKENS", "300"))
         
     def validate_config(self):
         """Validate all configuration parameters"""
-        required_vars = ["OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
+        required_vars = ["SUPABASE_URL", "SUPABASE_KEY"]
         missing_vars = [var for var in required_vars if not os.getenv(var)]
-        
         if missing_vars:
             raise EnvironmentError(f"Missing environment variables: {missing_vars}")
 
@@ -320,30 +320,29 @@ class RAGSystem:
         # Validate inputs
         self._validate_initialization_parameters()
         
-        # AI parameters
-        self.ai_api_key = self.config.ai_api_key
-        self.ai_main_model = self.config.main_model
-        self.ai_embedding_model = self.config.embedding_model
+        # AI parameters - Ollama configuration
+        self.ollama_base_url = self.config.ollama_base_url
+        self.embedding_model = self.config.embedding_model
+        self.chat_model = self.config.chat_model
         self.ai_max_token_response = self.config.max_token_response
-        self.ai_instance = OpenAI(api_key=self.config.ai_api_key)
         self.ai_default_no_response = "I couldn't find any relevant information in the knowledge base regarding your question."
         self.ai_system_role_prompt = "You are a helpful assistant with access to relevant documents and chat history. If the relevant documents and chat history has nothing to do with the user query, respond politely that the query is out of context."
-        
+
         # Chunk parameters
         self.max_chunk_tokens = self.config.max_chunk_tokens
         self.overlap_chunk_tokens = self.config.overlap_chunk_tokens
-        
+
         # Supabase parameters
         self.supabase_key = self.config.supabase_key
         self.supabase_url = self.config.supabase_url
         try:
-            self.supabase: Client = create_client(self.supabase_url, self.supabase_key)
+            self.supabase = create_client(self.supabase_url, self.supabase_key)
         except Exception as e:
             raise ConnectionError(f"Failed to connect to Supabase: {e}")
-        
+
         self.vector_search_threshold = self.config.vector_search_threshold
         self.vector_search_match_count = self.config.vector_search_match_count
-        
+
         # Files processing parameters
         self.processed_files_list = os.getenv("PROCESSED_FILES_DIR", "./data/processed_files.txt")
 
@@ -351,14 +350,14 @@ class RAGSystem:
         self.chat_history = []
         self.is_initial_session = False
         self.max_history_length = 20
-        
+
         # Async session for async operations
         self.use_async = use_async
         self.session = None
-        
+
         # Initialize persistent cache manager
         cache_dir = os.getenv("CACHE_DIR", "./cache/rag_cache")
-        
+
         # If cache_dir is relative, make it relative to the project root
         if not os.path.isabs(cache_dir):
             # Find project root (directory containing .env file)
@@ -369,18 +368,18 @@ class RAGSystem:
                 if parent == project_root:  # Reached filesystem root
                     break
                 project_root = parent
-            
+
             if os.path.exists(os.path.join(project_root, '.env')):
                 cache_dir = os.path.join(project_root, cache_dir.lstrip('./'))
             else:
                 # Fallback to absolute path
                 cache_dir = os.path.abspath(cache_dir)
-        
+
         self.cache_manager = PersistentCacheManager(cache_dir=cache_dir, max_cache_size_mb=100)
-        
+
         # Keep reference to embedding cache for compatibility
         self.embedding_cache = self.cache_manager.embedding_cache
-        
+
         # Statistics for cache performance and API calls
         self.cache_stats = {
             "embedding_hits": 0,
@@ -388,23 +387,17 @@ class RAGSystem:
             "response_hits": 0,
             "response_misses": 0
         }
+
+        # No OpenAI API call stats for offline models
         
-        # API call tracking
-        self.api_call_stats = {
-            "openai_embedding_calls": 0,
-            "openai_chat_calls": 0,
-            "total_openai_calls": 0,
-            "total_tokens_used": 0,
-            "embedding_tokens_used": 0,
-            "chat_tokens_used": 0
-        }
-        
+        # Validate Ollama connection and models
+        if not self.validate_ollama_connection():
+            self.logger.logger.warning("Ollama validation failed. Please ensure Ollama is running and the required models are available.")
+
         self.logger.logger.info("OptimizedRAGSystem initialized successfully with persistent caching")
 
     def _validate_initialization_parameters(self):
         """Validate initialization parameters"""
-        if not self.config.ai_api_key or not isinstance(self.config.ai_api_key, str):
-            raise ValueError("AI_API_Key must be a non-empty string")
         if not self.config.supabase_key or not isinstance(self.config.supabase_key, str):
             raise ValueError("Supabase_API_Key must be a non-empty string")
         if not self.config.supabase_url or not isinstance(self.config.supabase_url, str):
@@ -418,12 +411,31 @@ class RAGSystem:
         if self.config.max_chunk_tokens <= self.config.overlap_chunk_tokens:
             raise ValueError("MAX_CHUNK_TOKENS must be greater than OVERLAP_CHUNK_TOKENS")
 
-    def validate_api_key(self, api_key: str) -> bool:
-        """Validate API key format and basic security"""
-        if not api_key or len(api_key) < 20:
+    def validate_ollama_connection(self) -> bool:
+        """Validate that Ollama is running and models are available"""
+        try:
+            # Check if Ollama is running
+            response = requests.get(f"{self.ollama_base_url}/api/tags")
+            response.raise_for_status()
+            
+            available_models = response.json().get("models", [])
+            model_names = [model["name"] for model in available_models]
+            
+            # Check if required models are available
+            if self.embedding_model not in model_names:
+                self.logger.logger.warning(f"Embedding model '{self.embedding_model}' not found in Ollama. Available models: {model_names}")
+                return False
+            
+            if self.chat_model not in model_names:
+                self.logger.logger.warning(f"Chat model '{self.chat_model}' not found in Ollama. Available models: {model_names}")
+                return False
+            
+            self.logger.logger.info(f"Ollama connection validated. Using embedding model: {self.embedding_model}, chat model: {self.chat_model}")
+            return True
+            
+        except Exception as e:
+            self.logger.log_error(e, "validate_ollama_connection")
             return False
-        # Add more validation logic as needed
-        return True
 
     def sanitize_input(self, text: str) -> str:
         """Sanitize user input to prevent injection attacks"""
@@ -434,107 +446,271 @@ class RAGSystem:
         # Limit length to prevent excessive token usage
         return sanitized[:10000]  # Limit to 10k characters
 
+    # Embedding Generation for User Query
     @measure_performance
     @retry_with_backoff(max_retries=3, base_delay=1.0)
     def generate_embedding(self, text: str) -> Optional[List[float]]:
-        """Generate embedding with caching and retry logic"""
+        """Generate embedding with caching and retry logic using offline model"""
         if not text or not text.strip():
             return None
-            
-        # Check persistent cache first
         text_hash = hashlib.md5(text.encode()).hexdigest()
         cached_embedding = self.cache_manager.get_embedding(text_hash)
         if cached_embedding is not None:
             self.cache_stats["embedding_hits"] += 1
             self.logger.logger.debug(f"Embedding cache HIT for text hash: {text_hash[:8]}...")
             return cached_embedding
-        
-        # Cache miss - call API
         self.cache_stats["embedding_misses"] += 1
         self.logger.logger.debug(f"Embedding cache MISS for text hash: {text_hash[:8]}...")
-        
         try:
             start_time = time.time()
-            response = self.ai_instance.embeddings.create(
-                input=text,
-                model=self.ai_embedding_model
-            )
-            embedding = response.data[0].embedding
-            
-            # Track API call statistics
-            self.api_call_stats["openai_embedding_calls"] += 1
-            self.api_call_stats["total_openai_calls"] += 1
-            if hasattr(response, 'usage') and response.usage:
-                tokens_used = getattr(response.usage, 'total_tokens', 0)
-                self.api_call_stats["embedding_tokens_used"] += tokens_used
-                self.api_call_stats["total_tokens_used"] += tokens_used
-            
-            # Cache the result in persistent cache
+            # Call Ollama embedding API
+            ollama_url = f"{self.ollama_base_url}/api/embeddings"
+            payload = {
+                "model": self.embedding_model,
+                "prompt": text
+            }
+            response = requests.post(ollama_url, json=payload)
+            response.raise_for_status()
+            embedding = response.json()["embedding"]
             self.cache_manager.set_embedding(text_hash, embedding)
-            
-            # Update performance metrics
             self.performance_metrics.embedding_time += time.time() - start_time
-            
-            self.logger.logger.debug(f"Generated embedding via API call (total calls: {self.api_call_stats['openai_embedding_calls']})")
-            
+            self.logger.logger.debug(f"Generated embedding via Ollama API")
             return embedding
         except Exception as e:
             self.logger.log_error(e, "generate_embedding")
             return None
 
+    # Embedding Generation for File processing
     def generate_embeddings_batch(self, texts: List[str]) -> List[List[float]]:
-        """Generate embeddings for multiple texts in a single API call"""
+        """Generate embeddings for multiple texts using Ollama (sequential calls)"""
         if not texts:
             return []
-            
         try:
             start_time = time.time()
-            response = self.ai_instance.embeddings.create(
-                input=texts,
-                model=self.ai_embedding_model
-            )
-            embeddings = [data.embedding for data in response.data]
+            embeddings = []
+            ollama_url = f"{self.ollama_base_url}/api/embeddings"
             
-            # Track API call statistics for batch
-            self.api_call_stats["openai_embedding_calls"] += 1
-            self.api_call_stats["total_openai_calls"] += 1
-            if hasattr(response, 'usage') and response.usage:
-                tokens_used = getattr(response.usage, 'total_tokens', 0)
-                self.api_call_stats["embedding_tokens_used"] += tokens_used
-                self.api_call_stats["total_tokens_used"] += tokens_used
-            
-            # Cache the results
-            for text, embedding in zip(texts, embeddings):
+            # Ollama doesn't support batch embeddings, so we make sequential calls
+            for text in texts:
+                payload = {
+                    "model": self.embedding_model,
+                    "prompt": text
+                }
+                response = requests.post(ollama_url, json=payload)
+                response.raise_for_status()
+                embedding = response.json()["embedding"]
+                embeddings.append(embedding)
+                
+                # Cache each embedding
                 text_hash = hashlib.md5(text.encode()).hexdigest()
                 self.cache_manager.set_embedding(text_hash, embedding)
             
-            # Update performance metrics
             self.performance_metrics.embedding_time += time.time() - start_time
-            
-            self.logger.logger.debug(f"Generated {len(embeddings)} embeddings via batch API call")
-            
+            self.logger.logger.debug(f"Generated {len(embeddings)} embeddings via Ollama API")
             return embeddings
         except Exception as e:
             self.logger.log_error(e, "generate_embeddings_batch")
             return []
 
     async def generate_embedding_async(self, text: str) -> Optional[List[float]]:
-        """Async version of embedding generation"""
+        """Async version of embedding generation using Ollama"""
         if not self.use_async:
             return self.generate_embedding(text)
+        async with aiohttp.ClientSession() as session:
+            try:
+                ollama_url = f"{self.ollama_base_url}/api/embeddings"
+                payload = {
+                    "model": self.embedding_model,
+                    "prompt": text
+                }
+                async with session.post(ollama_url, json=payload) as resp:
+                    resp.raise_for_status()
+                    result = await resp.json()
+                    embedding = result["embedding"]
+                    text_hash = hashlib.md5(text.encode()).hexdigest()
+                    self.cache_manager.set_embedding(text_hash, embedding)
+                    return embedding
+            except Exception as e:
+                self.logger.log_error(e, "generate_embedding_async")
+                return None
+
+    #Generation of response from AI
+    @measure_performance
+    def answer_this(self, question: str) -> Dict[str, Any]:
+        """
+        Enhanced answer generation with comprehensive optimizations and response caching
+        """
+        overall_start_time = time.time()
+        
+        # Sanitize input
+        question = self.sanitize_input(question)
+        if not question:
+            return {"response": "Invalid input provided.", "error": "Input validation failed"}
+        
+        # Check response cache first
+        question_hash = hashlib.md5(question.encode()).hexdigest()
+        cached_response = self.cache_manager.get_response(question_hash)
+        if cached_response is not None:
+            self.cache_stats["response_hits"] += 1
+            self.logger.logger.debug(f"Response cache HIT for question hash: {question_hash[:8]}...")
+            cached_data = cached_response["response"]
+            cached_data["cached"] = True
+            cached_data["cache_timestamp"] = cached_response["timestamp"]
+            return cached_data
+        
+        # Cache miss - continue with full processing
+        self.cache_stats["response_misses"] += 1
+        self.logger.logger.debug(f"Response cache MISS for question hash: {question_hash[:8]}...")
+        
+        try:
+            # Step 1: Convert query to embedding
+            embedding_start = time.time()
+            query_embedding = self.generate_embedding(question)
+            if not query_embedding:
+                return {"response": "Failed to process your question. Please try again.", "error": "Embedding generation failed"}
             
-        # For now, using sync version wrapped in async
-        # In production, you'd want to use aiohttp for true async HTTP calls
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.generate_embedding, text)
+            # Step 2: Vector search in Supabase
+            search_start = time.time()
+            response = self.supabase.rpc(
+                "match_documents", 
+                {
+                    "query_embedding": query_embedding,
+                    "match_threshold": self.vector_search_threshold,
+                    "match_count": self.vector_search_match_count
+                }
+            ).execute()
+            
+            documents = response.data if response.data else []
+            self.performance_metrics.search_time += time.time() - search_start
+            self.performance_metrics.num_documents_retrieved = len(documents)
+            
+            if not documents:
+                return {"response": self.ai_default_no_response, "documents_found": 0, "sources": []}
+            
+            # Step 3: Extract and manage context with source tracking
+            context_parts = []
+            source_documents = []
+            
+            for i, doc in enumerate(documents):
+                context_parts.append(doc["content"])
+                
+                # Extract source information
+                metadata = json.loads(doc.get("metadata", "{}")) if isinstance(doc.get("metadata"), str) else doc.get("metadata", {})
+                source_info = self._extract_source_info(doc, metadata, i)
+                source_documents.append(source_info)
+            
+            context = "\n".join(context_parts)
+            context = self._manage_context_window(context)
+            
+            # Step 4: Optimize chat history
+            self._optimize_chat_history()
+            
+            # Step 5: Construct message history
+            messages = []
+            
+            if not self.is_initial_session:
+                messages = [{"role": "system", "content": self.ai_system_role_prompt}]
+                self.is_initial_session = True
+                
+            if self.chat_history:
+                messages.append({"role": "system", "content": "Chat history follows:"})
+                messages += self.chat_history
+                
+            # Add the current user query with retrieved context
+            combined_input = f"[Reference Documents]\n{context}\n\n{question}"
+            messages.append({"role": "user", "content": combined_input})
+            
+            # Step 6: Call Ollama chat completion API
+            generation_start = time.time()
+            
+            # Convert messages to Ollama format (combine into a single prompt)
+            prompt_parts = []
+            for msg in messages:
+                if msg["role"] == "system":
+                    prompt_parts.append(f"System: {msg['content']}")
+                elif msg["role"] == "user":
+                    prompt_parts.append(f"User: {msg['content']}")
+                elif msg["role"] == "assistant":
+                    prompt_parts.append(f"Assistant: {msg['content']}")
+            
+            combined_prompt = "\n\n".join(prompt_parts) + "\n\nAssistant:"
+            
+            payload = {
+                "model": self.chat_model,
+                "prompt": combined_prompt,
+                "stream": False,
+                "options": {
+                    "num_predict": self.ai_max_token_response,
+                    "temperature": 0.7
+                }
+            }
+            
+            try:
+                ollama_url = f"{self.ollama_base_url}/api/generate"
+                response = requests.post(ollama_url, json=payload)
+                response.raise_for_status()
+                chat_response = response.json()
+                answer = chat_response.get("response", "")
+            except Exception as e:
+                self.logger.log_error(e, "chat_completion")
+                answer = self.ai_default_no_response
+            
+            self.performance_metrics.generation_time += time.time() - generation_start
+            self.logger.logger.debug(f"Generated chat response via Ollama API")
+            
+            # Update chat history for memory
+            self.chat_history.append({"role": "user", "content": question})
+            self.chat_history.append({"role": "assistant", "content": answer})
+            
+            # Calculate total time and log performance
+            total_time = time.time() - overall_start_time
+            self.performance_metrics.total_time = total_time
+            self.performance_metrics.query_length = len(question)
+            
+            self.logger.log_query(question, total_time, len(documents))
+            self.logger.log_performance(self.performance_metrics)
+            
+            # Prepare response data
+            response_data = {
+                "response": answer, 
+                "documents_found": len(documents),
+                "response_time": total_time,
+                "performance_metrics": self.performance_metrics,
+                "sources": source_documents,
+                "cached": False
+            }
+            
+            # Cache the response for future use
+            self.cache_manager.set_response(question_hash, response_data)
+            
+            return response_data
+            
+        except Exception as e:
+            self.logger.log_error(e, "answer_this")
+            return {
+                "response": "An error occurred while processing your question. Please try again.", 
+                "error": str(e),
+                "sources": []
+            }
 
     def delete_file_embeddings(self, file_id: str) -> bool:
         """Delete all embeddings associated with a file (by stem) from Supabase."""
         try:
-            # Delete from Supabase
-            delete_response = self.supabase.table("document_embeddings").delete().eq("filename", file_id).execute()
+            # Get the full file path using DOCUMENTS_DIR and filename
+            documents_dir = os.getenv("DOCUMENTS_DIR", "./data/documents")
+            file_path = os.path.normpath(os.path.join(documents_dir, file_id))
+
+            # Delete from Supabase using both filename and file_path for safety
+            delete_response = (
+                self.supabase.table("nomic_embeddings")
+                .delete()
+                .eq("filename", file_id)
+                .execute()
+            )
             deleted_count = getattr(delete_response, "count", None)
-            self.logger.logger.info(f"Deleted embeddings for file_id '{file_id}' from Supabase. Rows deleted: {deleted_count}")
+            self.logger.logger.info(
+                f"Deleted embeddings for file '{file_id}' (path: {file_path}) from Supabase. Rows deleted: {deleted_count}"
+            )
             return True
         except Exception as e:
             self.logger.log_error(e, f"delete_embeddings_for_file: {file_id}")
@@ -709,150 +885,7 @@ class RAGSystem:
         
         return "\n\n".join(formatted_sources)
 
-    @measure_performance
-    def answer_this(self, question: str) -> Dict[str, Any]:
-        """
-        Enhanced answer generation with comprehensive optimizations and response caching
-        """
-        overall_start_time = time.time()
-        
-        # Sanitize input
-        question = self.sanitize_input(question)
-        if not question:
-            return {"response": "Invalid input provided.", "error": "Input validation failed"}
-        
-        # Check response cache first
-        question_hash = hashlib.md5(question.encode()).hexdigest()
-        cached_response = self.cache_manager.get_response(question_hash)
-        if cached_response is not None:
-            self.cache_stats["response_hits"] += 1
-            self.logger.logger.debug(f"Response cache HIT for question hash: {question_hash[:8]}...")
-            cached_data = cached_response["response"]
-            cached_data["cached"] = True
-            cached_data["cache_timestamp"] = cached_response["timestamp"]
-            return cached_data
-        
-        # Cache miss - continue with full processing
-        self.cache_stats["response_misses"] += 1
-        self.logger.logger.debug(f"Response cache MISS for question hash: {question_hash[:8]}...")
-        
-        try:
-            # Step 1: Convert query to embedding
-            embedding_start = time.time()
-            query_embedding = self.generate_embedding(question)
-            if not query_embedding:
-                return {"response": "Failed to process your question. Please try again.", "error": "Embedding generation failed"}
-            
-            # Step 2: Vector search in Supabase
-            search_start = time.time()
-            response = self.supabase.rpc(
-                "match_documents", 
-                {
-                    "query_embedding": query_embedding,
-                    "match_threshold": self.vector_search_threshold,
-                    "match_count": self.vector_search_match_count
-                }
-            ).execute()
-            
-            documents = response.data if response.data else []
-            self.performance_metrics.search_time += time.time() - search_start
-            self.performance_metrics.num_documents_retrieved = len(documents)
-            
-            if not documents:
-                return {"response": self.ai_default_no_response, "documents_found": 0, "sources": []}
-            
-            # Step 3: Extract and manage context with source tracking
-            context_parts = []
-            source_documents = []
-            
-            for i, doc in enumerate(documents):
-                context_parts.append(doc["content"])
-                
-                # Extract source information
-                metadata = json.loads(doc.get("metadata", "{}")) if isinstance(doc.get("metadata"), str) else doc.get("metadata", {})
-                source_info = self._extract_source_info(doc, metadata, i)
-                source_documents.append(source_info)
-            
-            context = "\n".join(context_parts)
-            context = self._manage_context_window(context)
-            
-            # Step 4: Optimize chat history
-            self._optimize_chat_history()
-            
-            # Step 5: Construct message history
-            messages = []
-            
-            if not self.is_initial_session:
-                messages = [{"role": "system", "content": self.ai_system_role_prompt}]
-                self.is_initial_session = True
-                
-            if self.chat_history:
-                messages.append({"role": "system", "content": "Chat history follows:"})
-                messages += self.chat_history
-                
-            # Add the current user query with retrieved context
-            combined_input = f"[Reference Documents]\n{context}\n\n{question}"
-            messages.append({"role": "user", "content": combined_input})
-            
-            # Step 6: Call OpenAI with error handling
-            generation_start = time.time()
-            chat_response = self.ai_instance.chat.completions.create(
-                model=self.ai_main_model,
-                messages=messages,
-                max_tokens=self.ai_max_token_response,
-                temperature=0.7
-            )
-            
-            # Track API call statistics for chat
-            self.api_call_stats["openai_chat_calls"] += 1
-            self.api_call_stats["total_openai_calls"] += 1
-            if hasattr(chat_response, 'usage') and chat_response.usage:
-                tokens_used = getattr(chat_response.usage, 'total_tokens', 0)
-                self.api_call_stats["chat_tokens_used"] += tokens_used
-                self.api_call_stats["total_tokens_used"] += tokens_used
-            
-            self.performance_metrics.generation_time += time.time() - generation_start
-            
-            self.logger.logger.debug(f"Generated chat response via API call (total chat calls: {self.api_call_stats['openai_chat_calls']})")
-            
-            # Step 7: Get AI response and update history
-            answer = chat_response.choices[0].message.content
-            
-            # Update chat history for memory
-            self.chat_history.append({"role": "user", "content": question})
-            self.chat_history.append({"role": "assistant", "content": answer})
-            
-            # Calculate total time and log performance
-            total_time = time.time() - overall_start_time
-            self.performance_metrics.total_time = total_time
-            self.performance_metrics.query_length = len(question)
-            
-            self.logger.log_query(question, total_time, len(documents))
-            self.logger.log_performance(self.performance_metrics)
-            
-            # Prepare response data
-            response_data = {
-                "response": answer, 
-                "documents_found": len(documents),
-                "response_time": total_time,
-                "performance_metrics": self.performance_metrics,
-                "sources": source_documents,
-                "cached": False
-            }
-            
-            # Cache the response for future use
-            self.cache_manager.set_response(question_hash, response_data)
-            
-            return response_data
-            
-        except Exception as e:
-            self.logger.log_error(e, "answer_this")
-            return {
-                "response": "An error occurred while processing your question. Please try again.", 
-                "error": str(e),
-                "sources": []
-            }
-
+  
     @measure_performance
     def initialize_files(self, file_directory: str):
         """Process all files in the directory with improved error handling"""
@@ -900,6 +933,8 @@ class RAGSystem:
         """Process documents using LangChain with enhanced error handling"""
         try:
             filename = filename.strip()
+            # Remove file extension from filename for metadata
+            filename_no_ext = os.path.splitext(filename)[0]
             file_path = os.path.normpath(os.path.join(directory, filename))
             
             if not os.path.exists(file_path):
@@ -922,7 +957,7 @@ class RAGSystem:
             
             # Add enhanced metadata to each document
             for i, doc in enumerate(documents):
-                doc.metadata["filename"] = filename
+                doc.metadata["filename"] = filename_no_ext
                 doc.metadata["file_path"] = file_path
                 doc.metadata["file_type"] = file_extension
                 doc.metadata["processed_at"] = datetime.now().isoformat()
@@ -973,18 +1008,20 @@ class RAGSystem:
                 content_preview = doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
                 metadata["content_preview"] = content_preview
                 
+                # Store embedding as a Python list for VECTOR(768) type
+                embedding_vector = embedding  # Pass as list of floats
                 data = {
                     "content": doc.page_content,
-                    "embedding": embedding,
+                    "embedding": embedding_vector,
                     "metadata": json.dumps(metadata),
                     "file_path": file_path,
                     "chunk_index": i,
-                    "filename": filename,
+                    "filename": filename_no_ext,
                     "file_type": file_extension
                 }
                 
                 try:
-                    self.supabase.table("document_embeddings").insert(data).execute()
+                    self.supabase.table("nomic_embeddings").insert(data).execute()
                 except Exception as e:
                     self.logger.log_error(e, f"uploading chunk {i} of {filename}")
                     
@@ -1000,22 +1037,6 @@ class RAGSystem:
         except Exception as e:
             self.logger.log_error(e, "save_processed_file")
 
-    def chunk_text(self, text: str) -> List[str]:
-        """Chunk text into smaller parts for processing"""
-        try:
-            encoding = tiktoken.get_encoding("cl100k_base")
-            tokens = encoding.encode(text)
-            
-            chunks = []
-            for i in range(0, len(tokens), self.max_chunk_tokens - self.overlap_chunk_tokens):
-                chunk_tokens = tokens[i:i + self.max_chunk_tokens]
-                chunk_text = encoding.decode(chunk_tokens)
-                chunks.append(chunk_text)
-            
-            return chunks
-        except Exception as e:
-            self.logger.log_error(e, "chunk_text")
-            return [text]  # Fallback: return original text
 
     def get_performance_report(self) -> Dict[str, Any]:
         """Get detailed performance report including cache statistics and API call tracking"""
@@ -1058,13 +1079,16 @@ class RAGSystem:
                     "cache_hit_rate": round((self.cache_stats["embedding_hits"] + self.cache_stats["response_hits"]) / max(1, total_embedding_requests + total_response_requests) * 100, 1)
                 }
             },
-            "api_call_statistics": {
-                **self.api_call_stats,
+            "ollama_statistics": {
+                "note": "Using Ollama for offline inference - no token counting available",
+                "embedding_model": self.embedding_model,
+                "chat_model": self.chat_model,
+                "ollama_base_url": self.ollama_base_url,
                 "cost_efficiency": {
                     "potential_embedding_calls_without_cache": total_embedding_requests,
-                    "actual_embedding_calls_made": self.api_call_stats["openai_embedding_calls"],
+                    "actual_embedding_calls_made": self.cache_stats["embedding_misses"],
                     "potential_response_calls_without_cache": total_response_requests,
-                    "actual_response_calls_made": self.api_call_stats["openai_chat_calls"],
+                    "actual_response_calls_made": self.cache_stats["response_misses"],
                     "embedding_api_savings_percentage": round((api_calls_saved_embedding / max(1, total_embedding_requests)) * 100, 1),
                     "response_api_savings_percentage": round((api_calls_saved_response / max(1, total_response_requests)) * 100, 1)
                 }
@@ -1114,19 +1138,19 @@ class RAGSystem:
         """Get comprehensive cache statistics"""
         return self.get_performance_report()["cache_statistics"]
     
-    def get_api_call_summary(self) -> Dict[str, Any]:
-        """Get a summary of API call statistics"""
+    def get_ollama_call_summary(self) -> Dict[str, Any]:
+        """Get a summary of Ollama call statistics"""
         total_embedding_requests = self.cache_stats["embedding_hits"] + self.cache_stats["embedding_misses"]
         total_response_requests = self.cache_stats["response_hits"] + self.cache_stats["response_misses"]
         
         return {
             "session_summary": {
-                "total_openai_api_calls": self.api_call_stats["total_openai_calls"],
-                "embedding_api_calls": self.api_call_stats["openai_embedding_calls"],
-                "chat_api_calls": self.api_call_stats["openai_chat_calls"],
-                "total_tokens_used": self.api_call_stats["total_tokens_used"],
-                "embedding_tokens_used": self.api_call_stats["embedding_tokens_used"],
-                "chat_tokens_used": self.api_call_stats["chat_tokens_used"]
+                "note": "Using Ollama for offline inference - no detailed token tracking",
+                "total_ollama_embedding_calls": self.cache_stats["embedding_misses"],
+                "total_ollama_chat_calls": self.cache_stats["response_misses"],
+                "embedding_model": self.embedding_model,
+                "chat_model": self.chat_model,
+                "ollama_base_url": self.ollama_base_url
             },
             "efficiency_metrics": {
                 "api_calls_saved_by_embedding_cache": self.cache_stats["embedding_hits"],
@@ -1137,17 +1161,15 @@ class RAGSystem:
             }
         }
     
-    def reset_api_call_stats(self):
-        """Reset API call statistics (useful for testing or new session tracking)"""
-        self.api_call_stats = {
-            "openai_embedding_calls": 0,
-            "openai_chat_calls": 0,
-            "total_openai_calls": 0,
-            "total_tokens_used": 0,
-            "embedding_tokens_used": 0,
-            "chat_tokens_used": 0
+    def reset_cache_stats(self):
+        """Reset cache statistics (useful for testing or new session tracking)"""
+        self.cache_stats = {
+            "embedding_hits": 0,
+            "embedding_misses": 0,
+            "response_hits": 0,
+            "response_misses": 0
         }
-        self.logger.logger.info("API call statistics reset")
+        self.logger.logger.info("Cache statistics reset")
 
     def reset_chat_history(self):
         """Reset chat history"""
