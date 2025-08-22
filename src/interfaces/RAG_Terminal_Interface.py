@@ -15,22 +15,19 @@ rag_core_path = current_dir.parent / 'rag_core'
 sys.path.insert(0, str(rag_core_path))
 
 from RAG_Core import RAGSystem, RAGSystemConfig
+from dotenv import load_dotenv
 
 def find_documents_folder():
-    """Find a suitable documents folder to process"""
-    possible_paths = [
-        os.getenv("DOCUMENTS_DIR") 
-    ]
-    
-    # Check each possible path
-    for path in possible_paths:
-        abs_path = Path(path).resolve()
+    """Find a suitable documents folder to process, using .env DOCUMENTS_DIR if available"""
+    # Load environment variables from .env file
+    load_dotenv()
+    documents_dir = os.getenv("DOCUMENTS_DIR")
+    if documents_dir:
+        abs_path = Path(documents_dir).resolve()
         if abs_path.exists() and abs_path.is_dir():
-            # Check if it contains any files
             files = list(abs_path.glob('*'))
             if files:
                 return str(abs_path)
-    
     return None
 
 def basic_usage_example():
@@ -123,11 +120,7 @@ def basic_usage_example():
         performance_report = rag_system.get_performance_report()
         cache_perf = performance_report['cache_performance']
         
-        print(f"\n📈 Session Stats:")
-        print(f"   💾 Cache hits: {cache_perf['embedding_cache']['hits']} | Response cache: {cache_perf['response_cache']['hits']}")
-        print(f"   🔌 API calls this session: {performance_report['api_call_statistics']['total_openai_calls']}")
-        print(f"   💬 Questions asked: {performance_report['chat_history_length']}")
-        
+               
         print("\n" + "=" * 50)
 
 def advanced_configuration_example():
