@@ -1,8 +1,0 @@
-Steps for Improving the RAG
-1. Consider using sentence/paragraph-aware chunking for legal/medical text.
-2. Normalize text before embedding - 	Remove extra whitespace, fix encoding, unify case sensitivity.
-3. Combine similarity with Postgres full-text search for better recall.
-4. Apply reranking (optional) Use models like Cohere’s reranker or OpenAI LLMs to rank top-k results.
-5. Semantic caching	Cache embeddings + responses for repeated queries.
-6. Use VectorStoreRetriever with filters	Example: retriever.get_relevant_documents(query) with metadata filtering
-7. Use MultiQueryRetriever or ParentDocumentRetriever	For long docs or multiple query reformulations.
