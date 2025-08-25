@@ -418,23 +418,21 @@ async def delete_file(file_id: str):
         
         logger.info(f"File deleted successfully: {full_filename}")
 
-        return {"message": f"File '{full_filename}' deleted successfully", "file_id": file_id}
+        return isFileDeleted
     except Exception as e:
         logger.error(f"Error deleting file: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-#API call for deleting embeddings and Cache associated with a file
+#API call for deleting embeddings associated with a file
 @app.delete("/api/delete-embeddings/{file_id}")
 async def delete_embeddings(file_id: str):
     """Delete embeddings associated with a file by file_id (stem)"""
     try:
         rag = get_rag_system()      
-        deleted = rag.delete_file_embeddings(file_id) # delete the embeddings in the vector database
+        deleted = rag.delete_file_embeddings(file_id)
         if deleted:
-            deleted=rag.delete_file_cache(file_id) #delete the cache
-            if deleted:
-                logger.info(f"Cache deleted for file_id: {file_id}")
-                return {"message": f"Embeddings for file '{file_id}' deleted successfully", "file_id": file_id}
+            logger.info(f"Embeddings deleted for file_id: {file_id}")
+            return {"message": f"Embeddings for file '{file_id}' deleted successfully", "file_id": file_id}
         else:
             raise HTTPException(status_code=404, detail=f"No embeddings found for file id '{file_id}'")
     except Exception as e:

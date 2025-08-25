@@ -24,9 +24,9 @@ def check_requirements():
     required_packages = [
         'fastapi',
         'uvicorn',
+        'openai',
         'supabase',
-        'langchain',
-        'requests'
+        'langchain'
     ]
     
     missing_packages = []
@@ -51,11 +51,9 @@ def check_environment_variables():
     print("\n🔍 Checking environment variables...")
     
     required_vars = {
+        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
         "SUPABASE_URL": os.getenv("SUPABASE_URL"), 
-        "SUPABASE_KEY": os.getenv("SUPABASE_KEY"),
-        "OLLAMA_BASE_URL": os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"),
-        "EMBEDDING_MODEL": os.getenv("EMBEDDING_MODEL", "nomic-embed-text:latest"),
-        "CHAT_MODEL": os.getenv("CHAT_MODEL", "deepseek-r1:8b")
+        "SUPABASE_KEY": os.getenv("SUPABASE_KEY")
     }
     
     missing_vars = []
@@ -70,33 +68,9 @@ def check_environment_variables():
         print(f"\n⚠️  Missing environment variables: {', '.join(missing_vars)}")
         print("Create a .env file with these variables or set them in your system")
         return False
+    
     print("✅ All environment variables set!")
     return True
-
-def check_ollama_server_and_models():
-    """Check if Ollama server is running and required models are available"""
-    print("\n🔍 Checking Ollama server and models...")
-    import requests
-    ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    embedding_model = os.getenv("EMBEDDING_MODEL", "nomic-embed-text:latest")
-    chat_model = os.getenv("CHAT_MODEL", "deepseek-r1:8b")
-    try:
-        response = requests.get(f"{ollama_base_url}/api/tags", timeout=5)
-        response.raise_for_status()
-        models = response.json().get("models", [])
-        model_names = [m["name"] for m in models]
-        if embedding_model not in model_names:
-            print(f"❌ Embedding model '{embedding_model}' not found in Ollama. Run: ollama pull {embedding_model}")
-            return False
-        if chat_model not in model_names:
-            print(f"❌ Chat model '{chat_model}' not found in Ollama. Run: ollama pull {chat_model}")
-            return False
-        print(f"✅ Ollama server running. Models available: {embedding_model}, {chat_model}")
-        return True
-    except Exception as e:
-        print(f"❌ Ollama server not running or unreachable at {ollama_base_url}. Error: {e}")
-        print("Start Ollama with: ollama serve")
-        return False
 
 def check_documents_folder():
     """Check if documents folder exists"""
@@ -199,29 +173,28 @@ def main():
     
     # Check all requirements
     requirements_ok = check_requirements()
-    env_vars_ok = check_environment_variables()
-    ollama_ok = check_ollama_server_and_models()
+    env_vars_ok = check_environment_variables() 
     check_documents_folder()
-
+    
     if not requirements_ok:
         print("\n❌ Please install missing requirements first:")
         print("pip install -r requirements/web_requirements.txt")
         return
-
+    
     if not env_vars_ok:
         print("\n❌ Please set up environment variables first")
-        print("Create a .env file with your Supabase and Ollama settings")
+        print("Create a .env file with your API keys")
         return
-
-    if not ollama_ok:
-        print("\n❌ Please start Ollama and pull the required models before continuing.")
-        print("See OLLAMA_SETUP_GUIDE.md for instructions.")
-        return
-
+    
     print("\n🎉 All checks passed! Ready to start the web interface.")
-
+    
+    # Ask user if they want to continue
     try:
+       # response = input("\n▶️  Start the web server? (y/n): ").lower().strip()
+      #  if response in ['y', 'yes', '']:
         start_server()
+      #  else:
+      #      print("👋 Startup cancelled")
     except KeyboardInterrupt:
         print("\n👋 Startup cancelled")
 
