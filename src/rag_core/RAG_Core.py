@@ -62,6 +62,12 @@ class RAGSystemConfig:
         self.max_chunk_tokens = int(os.getenv("MAX_CHUNK_TOKENS", "600"))
         self.overlap_chunk_tokens = int(os.getenv("OVERLAP_CHUNK_TOKENS", "300"))
         
+        # Query classification configuration
+        self.classification_model = os.getenv("CLASSIFICATION_MODEL", "gpt-3.5-turbo")
+        self.classification_max_tokens = int(os.getenv("CLASSIFICATION_MAX_TOKENS", "20"))
+        self.classification_temperature = float(os.getenv("CLASSIFICATION_TEMPERATURE", "0.1"))
+        self.classification_confidence_threshold = float(os.getenv("CLASSIFICATION_CONFIDENCE_THRESHOLD", "0.7"))
+        
     def validate_config(self):
         """Validate all configuration parameters"""
         required_vars = ["OPENAI_API_KEY", "SUPABASE_URL", "SUPABASE_KEY"]
@@ -399,6 +405,20 @@ class RAGSystem:
             "chat_tokens_used": 0
         }
         
+        # Query routing statistics
+        self.routing_stats = {
+            "total_queries": 0,
+            "direct_route": 0,
+            "knowledge_base_route": 0,
+            "fallback_route": 0,
+            "cache_hits": 0,
+            "classification_method": {
+                "rule_based": 0,
+                "llm_fallback": 0,
+                "llm_error": 0
+            }
+        }
+        
         self.logger.logger.info("OptimizedRAGSystem initialized successfully with persistent caching")
 
     def _validate_initialization_parameters(self):
@@ -433,6 +453,262 @@ class RAGSystem:
         sanitized = re.sub(r'[<>"\']', '', text)
         # Limit length to prevent excessive token usage
         return sanitized[:10000]  # Limit to 10k characters
+
+    def classify_query_intent_rule_based(self, question: str) -> Dict[str, Any]:
+        """
+        Rule-based query classification using pattern matching.
+        Returns classification result with routing decision.
+        """
+        question_lower = question.lower().strip()
+        
+        # Define query patterns for different categories
+        general_knowledge_patterns = [
+            # Greetings and conversational
+            r'\b(hello|hi|hey|good morning|good afternoon|good evening)\b',
+            r'\b(how are you|what\'s up|how\'s it going)\b',
+            r'\b(thank you|thanks|bye|goodbye|see you)\b',
+            
+            # General knowledge questions
+            r'\b(what is|who is|where is|when is|why is|how is)\b.*\b(capital|president|currency|population)\b',
+            r'\b(weather|temperature|climate)\b',
+            r'\b(current|today|yesterday|tomorrow|now)\b.*\b(date|time|news)\b',
+            r'\b(joke|story|fun fact|trivia)\b',
+            
+            # Math and calculations
+            r'\b(calculate|compute|solve|what is)\b.*[\d\+\-\*\/\=]',
+            r'\b\d+\s*[\+\-\*\/]\s*\d+\b',
+            
+            # Programming/coding (general)
+            r'\b(how to code|programming tutorial|syntax|algorithm)\b',
+            r'\b(python|javascript|java|c\+\+)\b.*\b(tutorial|example|how to)\b',
+            
+            # General information
+            r'\b(define|meaning of|explanation of)\b.*\b(word|term|concept)\b',
+            r'\b(latest news|current events|recent developments)\b'
+        ]
+        
+        # Domain-specific patterns (should use knowledge base)
+        domain_specific_patterns = [
+            # File/document references
+            r'\b(document|file|pdf|report|guideline|policy|procedure)\b',
+            r'\b(according to|based on|mentioned in|stated in)\b',
+            
+            # Company/organization specific
+            r'\b(our company|organization|policy|procedure|guideline)\b',
+            r'\b(enrollment|authorization|steps|process|workflow)\b',
+            
+            # Specific knowledge requests
+            r'\b(find information about|tell me about|explain|details about)\b.*\b(specific|particular|mentioned)\b'
+        ]
+        
+        # Technical/ambiguous patterns (could go either way)
+        ambiguous_patterns = [
+            r'\b(what is|how does|explain|tell me about)\b',
+            r'\b(help|assistance|support)\b'
+        ]
+        
+        # Check for general knowledge patterns
+        for pattern in general_knowledge_patterns:
+            if re.search(pattern, question_lower):
+                return {
+                    "route": "direct",
+                    "confidence": 0.8,
+                    "category": "general_knowledge",
+                    "reasoning": "Query appears to be general knowledge or conversational",
+                    "method": "rule_based"
+                }
+        
+        # Check for domain-specific patterns
+        for pattern in domain_specific_patterns:
+            if re.search(pattern, question_lower):
+                return {
+                    "route": "knowledge_base",
+                    "confidence": 0.9,
+                    "category": "domain_specific",
+                    "reasoning": "Query appears to be domain-specific, likely needs knowledge base",
+                    "method": "rule_based"
+                }
+        
+        # Check for ambiguous patterns - use knowledge base as fallback
+        for pattern in ambiguous_patterns:
+            if re.search(pattern, question_lower):
+                return {
+                    "route": "knowledge_base",
+                    "confidence": 0.6,
+                    "category": "ambiguous",
+                    "reasoning": "Ambiguous query, defaulting to knowledge base search",
+                    "method": "rule_based"
+                }
+        
+        # Default: low confidence for unclassified queries
+        return {
+            "route": "knowledge_base",
+            "confidence": 0.3,
+            "category": "unclassified",
+            "reasoning": "Unclassified query, low confidence from rule-based classification",
+            "method": "rule_based"
+        }
+
+    def classify_query_intent_llm(self, question: str) -> Dict[str, Any]:
+        """
+        LLM-based query classification for uncertain cases.
+        Used as fallback when rule-based classification has low confidence.
+        """
+        try:
+            classification_prompt = f"""Classify this user query into one of these categories based on the most appropriate response strategy:
+
+Categories:
+1. "general_knowledge" - General questions, greetings, math, weather, current events, definitions, conversational queries that don't require specific domain knowledge
+2. "domain_specific" - Questions about documents, company policies, procedures, authorization, enrollment, specific organizational information that would be in a knowledge base
+3. "ambiguous" - Unclear queries that could fit either category
+
+Query: "{question}"
+
+Respond with ONLY the category name (general_knowledge, domain_specific, or ambiguous). No explanation needed."""
+            
+            response = self.ai_instance.chat.completions.create(
+                model=self.config.classification_model,
+                messages=[{"role": "user", "content": classification_prompt}],
+                max_tokens=self.config.classification_max_tokens,
+                temperature=self.config.classification_temperature
+            )
+            
+            # Track API call for LLM classification
+            self.api_call_stats["openai_chat_calls"] += 1
+            self.api_call_stats["total_openai_calls"] += 1
+            if hasattr(response, 'usage') and response.usage:
+                tokens_used = getattr(response.usage, 'total_tokens', 0)
+                self.api_call_stats["chat_tokens_used"] += tokens_used
+                self.api_call_stats["total_tokens_used"] += tokens_used
+            
+            classification = response.choices[0].message.content.strip().lower()
+            
+            # Parse LLM response and return structured result
+            if "general" in classification:
+                return {
+                    "route": "direct",
+                    "confidence": 0.85,
+                    "category": "general_knowledge",
+                    "reasoning": "LLM classified as general knowledge query",
+                    "method": "llm"
+                }
+            elif "domain" in classification:
+                return {
+                    "route": "knowledge_base",
+                    "confidence": 0.85,
+                    "category": "domain_specific",
+                    "reasoning": "LLM classified as domain-specific query",
+                    "method": "llm"
+                }
+            else:  # ambiguous or any other response
+                return {
+                    "route": "knowledge_base",
+                    "confidence": 0.7,
+                    "category": "ambiguous",
+                    "reasoning": "LLM classified as ambiguous, defaulting to knowledge base",
+                    "method": "llm"
+                }
+                
+        except Exception as e:
+            self.logger.log_error(e, "classify_query_intent_llm")
+            # Fallback to knowledge base if LLM classification fails
+            return {
+                "route": "knowledge_base",
+                "confidence": 0.5,
+                "category": "llm_error",
+                "reasoning": "LLM classification failed, defaulting to knowledge base",
+                "method": "llm_fallback",
+                "error": str(e)
+            }
+
+    def classify_query_intent(self, question: str) -> Dict[str, Any]:
+        """
+        Hybrid query classification: Rule-based first, then LLM fallback for low confidence cases.
+        Returns classification result with routing decision.
+        """
+        # Step 1: Try rule-based classification first
+        rule_based_result = self.classify_query_intent_rule_based(question)
+        
+        # Step 2: If confidence is high enough, use rule-based result
+        confidence_threshold = self.config.classification_confidence_threshold
+        if rule_based_result["confidence"] >= confidence_threshold:
+            self.logger.logger.debug(f"Rule-based classification used with confidence {rule_based_result['confidence']:.2f}")
+            return rule_based_result
+        
+        # Step 3: Low confidence - fallback to LLM classification
+        self.logger.logger.debug(f"Rule-based confidence {rule_based_result['confidence']:.2f} below threshold {confidence_threshold}, using LLM fallback")
+        
+        llm_result = self.classify_query_intent_llm(question)
+        
+        # Add hybrid method information
+        llm_result["hybrid_info"] = {
+            "rule_based_result": rule_based_result,
+            "fallback_reason": f"Rule-based confidence {rule_based_result['confidence']:.2f} below threshold {confidence_threshold}"
+        }
+        llm_result["method"] = "hybrid_llm_fallback"
+        
+        return llm_result
+
+    def answer_direct(self, question: str) -> Dict[str, Any]:
+        """
+        Answer query directly using LLM without knowledge base retrieval.
+        Used for general knowledge, conversational, and mathematical queries.
+        """
+        try:
+            start_time = time.time()
+            
+            # Create a focused system prompt for direct answers
+            system_prompt = """You are a helpful AI assistant. Answer the user's question directly and concisely. 
+            For general knowledge questions, provide accurate information. For conversational queries, respond naturally and friendly.
+            For calculations, show your work. If you're not certain about factual information, acknowledge the limitation."""
+            
+            messages = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": question}
+            ]
+            
+            # Generate response
+            chat_response = self.ai_instance.chat.completions.create(
+                model=self.ai_main_model,
+                messages=messages,
+                max_tokens=self.ai_max_token_response,
+                temperature=0.7
+            )
+            
+            # Track API call statistics
+            self.api_call_stats["openai_chat_calls"] += 1
+            self.api_call_stats["total_openai_calls"] += 1
+            if hasattr(chat_response, 'usage') and chat_response.usage:
+                tokens_used = getattr(chat_response.usage, 'total_tokens', 0)
+                self.api_call_stats["chat_tokens_used"] += tokens_used
+                self.api_call_stats["total_tokens_used"] += tokens_used
+            
+            answer = chat_response.choices[0].message.content
+            response_time = time.time() - start_time
+            
+            # Update chat history
+            self.chat_history.append({"role": "user", "content": question})
+            self.chat_history.append({"role": "assistant", "content": answer})
+            
+            self.logger.logger.info(f"Direct answer generated in {response_time:.2f}s")
+            
+            return {
+                "response": answer,
+                "route_used": "direct",
+                "documents_found": 0,
+                "response_time": response_time,
+                "sources": [],
+                "cached": False
+            }
+            
+        except Exception as e:
+            self.logger.log_error(e, "answer_direct")
+            return {
+                "response": "I apologize, but I encountered an error while processing your question. Please try again.",
+                "error": str(e),
+                "route_used": "direct",
+                "sources": []
+            }
 
     @measure_performance
     @retry_with_backoff(max_retries=3, base_delay=1.0)
@@ -712,38 +988,68 @@ class RAGSystem:
     @measure_performance
     def answer_this(self, question: str) -> Dict[str, Any]:
         """
-        Enhanced answer generation with comprehensive optimizations and response caching
+        Enhanced answer generation with query routing and comprehensive optimizations.
+        Routes queries to either direct LLM response or knowledge base retrieval based on query classification.
         """
         overall_start_time = time.time()
+        
+        # Track total queries
+        self.routing_stats["total_queries"] += 1
         
         # Sanitize input
         question = self.sanitize_input(question)
         if not question:
             return {"response": "Invalid input provided.", "error": "Input validation failed"}
         
-        # Check response cache first
+        # Step 1: Classify query intent for routing decision
+        classification = self.classify_query_intent(question)
+        route_decision = classification["route"]
+        
+        # Track classification method used
+        method = classification.get("method", "unknown")
+        if method == "rule_based":
+            self.routing_stats["classification_method"]["rule_based"] += 1
+        elif method in ["llm", "hybrid_llm_fallback"]:
+            self.routing_stats["classification_method"]["llm_fallback"] += 1
+        elif method == "llm_fallback":
+            self.routing_stats["classification_method"]["llm_error"] += 1
+        
+        self.logger.logger.info(f"Query classified as '{classification['category']}' with confidence {classification['confidence']:.2f}, routing to '{route_decision}' (method: {method})")
+        
+        # Step 2: Route based on classification
+        if route_decision == "direct":
+            # Handle with direct LLM response (no knowledge base)
+            self.routing_stats["direct_route"] += 1
+            response_data = self.answer_direct(question)
+            response_data["classification"] = classification
+            return response_data
+        
+        # Step 3: Knowledge base route - check response cache first
         question_hash = hashlib.md5(question.encode()).hexdigest()
         cached_response = self.cache_manager.get_response(question_hash)
         if cached_response is not None:
             self.cache_stats["response_hits"] += 1
+            self.routing_stats["cache_hits"] += 1
             self.logger.logger.debug(f"Response cache HIT for question hash: {question_hash[:8]}...")
             cached_data = cached_response["response"]
             cached_data["cached"] = True
             cached_data["cache_timestamp"] = cached_response["timestamp"]
+            cached_data["classification"] = classification
             return cached_data
         
-        # Cache miss - continue with full processing
+        # Cache miss - continue with knowledge base processing
         self.cache_stats["response_misses"] += 1
+        self.routing_stats["knowledge_base_route"] += 1
         self.logger.logger.debug(f"Response cache MISS for question hash: {question_hash[:8]}...")
         
         try:
-            # Step 1: Convert query to embedding
+            # Step 4: Convert query to embedding
             embedding_start = time.time()
             query_embedding = self.generate_embedding(question)
             if not query_embedding:
                 return {"response": "Failed to process your question. Please try again.", "error": "Embedding generation failed"}
             
-            # Step 2: Vector search in Supabase
+            # Step 5: Vector search in Supabase
             search_start = time.time()
             response = self.supabase.rpc(
                 "match_documents", 
@@ -758,10 +1064,26 @@ class RAGSystem:
             self.performance_metrics.search_time += time.time() - search_start
             self.performance_metrics.num_documents_retrieved = len(documents)
             
+            # Step 6: Handle no documents found - fallback to direct answer if confidence is low
             if not documents:
-                return {"response": self.ai_default_no_response, "documents_found": 0, "sources": []}
+                if classification["confidence"] < 0.7:
+                    self.logger.logger.info("No documents found and low confidence, falling back to direct answer")
+                    self.routing_stats["fallback_route"] += 1
+                    fallback_response = self.answer_direct(question)
+                    fallback_response["route_used"] = "fallback_direct"
+                    fallback_response["classification"] = classification
+                    fallback_response["fallback_reason"] = "No relevant documents found in knowledge base"
+                    return fallback_response
+                else:
+                    return {
+                        "response": self.ai_default_no_response, 
+                        "documents_found": 0, 
+                        "sources": [],
+                        "route_used": "knowledge_base",
+                        "classification": classification
+                    }
             
-            # Step 3: Extract and manage context with source tracking
+            # Step 7: Extract and manage context with source tracking
             context_parts = []
             source_documents = []
             
@@ -776,14 +1098,18 @@ class RAGSystem:
             context = "\n".join(context_parts)
             context = self._manage_context_window(context)
             
-            # Step 4: Optimize chat history
+            # Step 8: Optimize chat history
             self._optimize_chat_history()
             
-            # Step 5: Construct message history
+            # Step 9: Construct message history with enhanced system prompt
             messages = []
             
             if not self.is_initial_session:
-                messages = [{"role": "system", "content": self.ai_system_role_prompt}]
+                enhanced_system_prompt = f"""You are a helpful assistant with access to relevant documents and chat history. 
+                The user's query was classified as '{classification['category']}' and routed to the knowledge base.
+                Use the provided reference documents to answer the question accurately. If the documents don't contain 
+                relevant information, acknowledge this limitation and provide what help you can based on general knowledge."""
+                messages = [{"role": "system", "content": enhanced_system_prompt}]
                 self.is_initial_session = True
                 
             if self.chat_history:
@@ -794,7 +1120,7 @@ class RAGSystem:
             combined_input = f"[Reference Documents]\n{context}\n\n{question}"
             messages.append({"role": "user", "content": combined_input})
             
-            # Step 6: Call OpenAI with error handling
+            # Step 10: Call OpenAI with error handling
             generation_start = time.time()
             chat_response = self.ai_instance.chat.completions.create(
                 model=self.ai_main_model,
@@ -815,7 +1141,7 @@ class RAGSystem:
             
             self.logger.logger.debug(f"Generated chat response via API call (total chat calls: {self.api_call_stats['openai_chat_calls']})")
             
-            # Step 7: Get AI response and update history
+            # Step 11: Get AI response and update history
             answer = chat_response.choices[0].message.content
             
             # Update chat history for memory
@@ -837,7 +1163,9 @@ class RAGSystem:
                 "response_time": total_time,
                 "performance_metrics": self.performance_metrics,
                 "sources": source_documents,
-                "cached": False
+                "cached": False,
+                "route_used": "knowledge_base",
+                "classification": classification
             }
             
             # Cache the response for future use
@@ -850,7 +1178,9 @@ class RAGSystem:
             return {
                 "response": "An error occurred while processing your question. Please try again.", 
                 "error": str(e),
-                "sources": []
+                "sources": [],
+                "route_used": "error",
+                "classification": classification if 'classification' in locals() else None
             }
 
     @measure_performance
@@ -1134,6 +1464,61 @@ class RAGSystem:
                 "total_api_calls_saved": self.cache_stats["embedding_hits"] + self.cache_stats["response_hits"],
                 "embedding_cache_efficiency": f"{(self.cache_stats['embedding_hits'] / max(1, total_embedding_requests)) * 100:.1f}%",
                 "response_cache_efficiency": f"{(self.cache_stats['response_hits'] / max(1, total_response_requests)) * 100:.1f}%"
+            }
+        }
+
+    def get_routing_statistics(self) -> Dict[str, Any]:
+        """Get comprehensive query routing statistics"""
+        total_queries = self.routing_stats["total_queries"]
+        
+        if total_queries == 0:
+            return {
+                "total_queries": 0,
+                "routing_breakdown": {"message": "No queries processed yet"}
+            }
+        
+        total_classifications = sum(self.routing_stats["classification_method"].values())
+        
+        return {
+            "total_queries": total_queries,
+            "routing_breakdown": {
+                "direct_answers": {
+                    "count": self.routing_stats["direct_route"],
+                    "percentage": f"{(self.routing_stats['direct_route'] / total_queries) * 100:.1f}%"
+                },
+                "knowledge_base_searches": {
+                    "count": self.routing_stats["knowledge_base_route"],
+                    "percentage": f"{(self.routing_stats['knowledge_base_route'] / total_queries) * 100:.1f}%"
+                },
+                "fallback_answers": {
+                    "count": self.routing_stats["fallback_route"],
+                    "percentage": f"{(self.routing_stats['fallback_route'] / total_queries) * 100:.1f}%"
+                },
+                "cache_hits": {
+                    "count": self.routing_stats["cache_hits"],
+                    "percentage": f"{(self.routing_stats['cache_hits'] / total_queries) * 100:.1f}%"
+                }
+            },
+            "classification_method_breakdown": {
+                "rule_based_success": {
+                    "count": self.routing_stats["classification_method"]["rule_based"],
+                    "percentage": f"{(self.routing_stats['classification_method']['rule_based'] / max(1, total_classifications)) * 100:.1f}%"
+                },
+                "llm_fallback_used": {
+                    "count": self.routing_stats["classification_method"]["llm_fallback"],
+                    "percentage": f"{(self.routing_stats['classification_method']['llm_fallback'] / max(1, total_classifications)) * 100:.1f}%"
+                },
+                "llm_classification_errors": {
+                    "count": self.routing_stats["classification_method"]["llm_error"],
+                    "percentage": f"{(self.routing_stats['classification_method']['llm_error'] / max(1, total_classifications)) * 100:.1f}%"
+                }
+            },
+            "efficiency_metrics": {
+                "knowledge_base_utilization": f"{((self.routing_stats['knowledge_base_route'] + self.routing_stats['fallback_route']) / total_queries) * 100:.1f}%",
+                "direct_response_rate": f"{(self.routing_stats['direct_route'] / total_queries) * 100:.1f}%",
+                "cache_hit_rate": f"{(self.routing_stats['cache_hits'] / total_queries) * 100:.1f}%",
+                "rule_based_classification_success": f"{(self.routing_stats['classification_method']['rule_based'] / max(1, total_classifications)) * 100:.1f}%",
+                "llm_fallback_rate": f"{(self.routing_stats['classification_method']['llm_fallback'] / max(1, total_classifications)) * 100:.1f}%"
             }
         }
     

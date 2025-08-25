@@ -11,3 +11,102 @@
 2025-08-03 20:01:48,947 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
 2025-08-03 20:01:48,989 - RAGSystem - INFO - Query processed: 56 chars, 8.18s, 3 docs retrieved
 2025-08-03 20:01:48,990 - RAGSystem - INFO - Performance - Embedding: 1.30s, Search: 3.61s, Generation: 3.05s, Total: 8.18s
+2025-08-25 20:23:39,677 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-25 20:23:39,679 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-25 20:23:39,679 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-25 20:23:39,680 - RAGSystem - INFO - No new files to process
+2025-08-25 20:24:41,469 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 20:24:43,689 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 400 Bad Request"
+2025-08-25 20:24:43,691 - RAGSystem - ERROR - Error in answer_this: {'code': '22000', 'details': None, 'hint': None, 'message': 'different vector dimensions 768 and 1536'}
+Traceback (most recent call last):
+  File "D:\GitHub\Retrieval-Augemented-Generation_Local\src\rag_core\RAG_Core.py", line 755, in answer_this
+    ).execute()
+      ~~~~~~~^^
+  File "C:\Users\YourKing\AppData\Roaming\Python\Python313\site-packages\postgrest\_sync\request_builder.py", line 127, in execute
+    raise APIError(r.json())
+postgrest.exceptions.APIError: {'code': '22000', 'details': None, 'hint': None, 'message': 'different vector dimensions 768 and 1536'}
+2025-08-25 20:32:04,308 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-25 20:32:04,309 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-25 20:32:04,310 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-25 20:32:04,310 - RAGSystem - INFO - No new files to process
+2025-08-25 20:32:53,475 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 20:33:05,407 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 400 Bad Request"
+2025-08-25 20:33:21,701 - RAGSystem - ERROR - Error in answer_this: {'code': '22000', 'details': None, 'hint': None, 'message': 'different vector dimensions 768 and 1536'}
+Traceback (most recent call last):
+  File "D:\GitHub\Retrieval-Augemented-Generation_Local\src\rag_core\RAG_Core.py", line 755, in answer_this
+    ).execute()
+      ~~~~~~~^^
+  File "C:\Users\YourKing\AppData\Roaming\Python\Python313\site-packages\postgrest\_sync\request_builder.py", line 127, in execute
+    raise APIError(r.json())
+postgrest.exceptions.APIError: {'code': '22000', 'details': None, 'hint': None, 'message': 'different vector dimensions 768 and 1536'}
+2025-08-25 20:38:56,425 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:39:16,961 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-25 20:39:17,011 - RAGSystem - INFO - Query processed: 22 chars, 28.92s, 3 docs retrieved
+2025-08-25 20:39:17,011 - RAGSystem - INFO - Performance - Embedding: 2.50s, Search: 9.17s, Generation: 2.10s, Total: 28.92s
+2025-08-25 20:40:26,270 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 20:40:27,162 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:41:04,331 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 20:41:05,036 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:42:04,781 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 20:42:05,558 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:42:32,911 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:43:31,374 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 20:43:36,010 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:44:42,509 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:49:44,671 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-25 20:49:44,673 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-25 20:49:44,674 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-25 20:49:44,675 - RAGSystem - INFO - No new files to process
+2025-08-25 20:50:01,209 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 20:50:09,309 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:51:29,286 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-25 20:51:29,288 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-25 20:51:29,288 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-25 20:51:29,289 - RAGSystem - INFO - No new files to process
+2025-08-25 20:52:15,471 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 20:52:24,403 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:55:02,099 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-25 20:55:02,101 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-25 20:55:02,101 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-25 20:55:02,102 - RAGSystem - INFO - No new files to process
+2025-08-25 20:55:29,345 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 20:55:35,826 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:57:11,325 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-25 20:57:11,327 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-25 20:57:11,327 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-25 20:57:11,328 - RAGSystem - INFO - No new files to process
+2025-08-25 20:57:24,576 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 20:57:33,955 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 20:58:28,651 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-25 20:58:30,231 - RAGSystem - INFO - Query processed: 23 chars, 70.50s, 5 docs retrieved
+2025-08-25 20:58:30,231 - RAGSystem - INFO - Performance - Embedding: 1.13s, Search: 12.75s, Generation: 14.32s, Total: 70.50s
+2025-08-25 21:42:35,672 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-25 21:42:35,674 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-25 21:42:35,674 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-25 21:42:35,675 - RAGSystem - INFO - No new files to process
+2025-08-25 21:43:53,828 - RAGSystem - INFO - Query classified as 'general_knowledge' with confidence 0.80, routing to 'direct' (method: rule_based)
+2025-08-25 21:44:03,292 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-25 21:44:03,349 - RAGSystem - INFO - Direct answer generated in 1.91s
+2025-08-25 21:51:00,318 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-25 21:51:00,320 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-25 21:51:00,320 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-25 21:51:00,321 - RAGSystem - INFO - No new files to process
+2025-08-25 21:51:23,612 - RAGSystem - INFO - Query classified as 'general_knowledge' with confidence 0.80, routing to 'direct' (method: rule_based)
+2025-08-25 21:51:30,211 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-25 21:51:30,267 - RAGSystem - INFO - Direct answer generated in 5.34s
+2025-08-25 21:54:12,028 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-25 21:54:12,037 - RAGSystem - INFO - Query classified as 'general_knowledge' with confidence 0.85, routing to 'direct' (method: hybrid_llm_fallback)
+2025-08-25 21:54:13,914 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-25 21:54:13,920 - RAGSystem - INFO - Direct answer generated in 1.88s
+2025-08-25 21:58:19,822 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-25 21:58:19,824 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-25 21:58:19,824 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-25 21:58:19,825 - RAGSystem - INFO - No new files to process
+2025-08-25 21:58:36,793 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-25 21:59:02,094 - RAGSystem - INFO - Query classified as 'domain_specific' with confidence 0.85, routing to 'knowledge_base' (method: hybrid_llm_fallback)
+2025-08-25 21:59:20,109 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-25 21:59:25,838 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-25 22:00:16,636 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-25 22:00:16,655 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-25 22:00:16,656 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-25 22:00:16,664 - RAGSystem - INFO - No new files to process
