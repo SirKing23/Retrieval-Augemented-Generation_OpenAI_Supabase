@@ -11,8 +11,7 @@ Optimized RAG System with comprehensive improvements including:
 
 import requests
 import os
-import chromadb
-from chromadb.config import Settings
+from supabase import create_client, Client
 from PyPDF2 import PdfReader
 import docx
 import json
@@ -52,25 +51,24 @@ class PerformanceMetrics:
 class RAGSystemConfig:
     """Configuration management class"""
     def __init__(self):
-        # ChromaDB configuration (replacing Supabase)
-        self.chromadb_path = os.getenv("CHROMADB_PATH", "./data/chromadb")
-        self.collection_name = os.getenv("COLLECTION_NAME", "document_embeddings")
-        
+        self.supabase_url = os.getenv("SUPABASE_URL")
+        self.supabase_key = os.getenv("SUPABASE_KEY")
         # Ollama configuration
         self.ollama_base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.embedding_model = os.getenv("EMBEDDING_MODEL", "nomic-embed-text:latest")
         self.chat_model = os.getenv("CHAT_MODEL", "deepseek-r1:8b")
         self.max_token_response = int(os.getenv("MAX_TOKEN_RESPONSE", "700"))
-        self.vector_search_threshold = float(os.getenv("VECTOR_SEARCH_THRESHOLD", "0.5"))  # Lowered from 0.7
-        self.vector_search_match_count = int(os.getenv("VECTOR_SEARCH_MATCH_COUNT", "8"))  # Increased from 5
+        self.vector_search_threshold = float(os.getenv("VECTOR_SEARCH_THRESHOLD", "0.7"))
+        self.vector_search_match_count = int(os.getenv("VECTOR_SEARCH_MATCH_COUNT", "5"))
         self.max_chunk_tokens = int(os.getenv("MAX_CHUNK_TOKENS", "600"))
         self.overlap_chunk_tokens = int(os.getenv("OVERLAP_CHUNK_TOKENS", "300"))
         
     def validate_config(self):
         """Validate all configuration parameters"""
-        # No longer need Supabase credentials
-        if not os.path.exists(os.path.dirname(self.chromadb_path)):
-            os.makedirs(os.path.dirname(self.chromadb_path), exist_ok=True)
+        required_vars = ["SUPABASE_URL", "SUPABASE_KEY"]
+        missing_vars = [var for var in required_vars if not os.getenv(var)]
+        if missing_vars:
+            raise EnvironmentError(f"Missing environment variables: {missing_vars}")
 
 class RAGLogger:
     """Structured logging class for the RAG system"""
@@ -334,34 +332,13 @@ class RAGSystem:
         self.max_chunk_tokens = self.config.max_chunk_tokens
         self.overlap_chunk_tokens = self.config.overlap_chunk_tokens
 
-        # ChromaDB parameters (replacing Supabase)
-        self.chromadb_path = self.config.chromadb_path
-        self.collection_name = self.config.collection_name
-        
+        # Supabase parameters
+        self.supabase_key = self.config.supabase_key
+        self.supabase_url = self.config.supabase_url
         try:
-            # Initialize ChromaDB client
-            self.chroma_client = chromadb.PersistentClient(
-                path=self.chromadb_path,
-                settings=Settings(
-                    anonymized_telemetry=False,
-                    allow_reset=True
-                )
-            )
-            
-            # Get or create collection
-            try:
-                self.collection = self.chroma_client.get_collection(name=self.collection_name)
-                self.logger.logger.info(f"Loaded existing ChromaDB collection: {self.collection_name}")
-            except Exception:
-                # Create new collection if it doesn't exist
-                self.collection = self.chroma_client.create_collection(
-                    name=self.collection_name,
-                    metadata={"description": "RAG System Document Embeddings"}
-                )
-                self.logger.logger.info(f"Created new ChromaDB collection: {self.collection_name}")
-                
+            self.supabase = create_client(self.supabase_url, self.supabase_key)
         except Exception as e:
-            raise ConnectionError(f"Failed to connect to ChromaDB: {e}")
+            raise ConnectionError(f"Failed to connect to Supabase: {e}")
 
         self.vector_search_threshold = self.config.vector_search_threshold
         self.vector_search_match_count = self.config.vector_search_match_count
@@ -421,6 +398,10 @@ class RAGSystem:
 
     def _validate_initialization_parameters(self):
         """Validate initialization parameters"""
+        if not self.config.supabase_key or not isinstance(self.config.supabase_key, str):
+            raise ValueError("Supabase_API_Key must be a non-empty string")
+        if not self.config.supabase_url or not isinstance(self.config.supabase_url, str):
+            raise ValueError("Supabase_URL must be a non-empty string")
         if self.config.max_token_response <= 0:
             raise ValueError("max_token_response must be positive")
         if not (0.0 <= self.config.vector_search_threshold <= 1.0):
@@ -471,25 +452,15 @@ class RAGSystem:
     def generate_embedding(self, text: str) -> Optional[List[float]]:
         """Generate embedding with caching and retry logic using offline model"""
         if not text or not text.strip():
-            self.logger.logger.warning("Attempted to generate embedding for empty text")
             return None
-            
-        # Clean and normalize text
-        text = text.strip()
-        if len(text) < 3:  # Too short to be meaningful
-            self.logger.logger.warning(f"Text too short for embedding: '{text}'")
-            return None
-            
         text_hash = hashlib.md5(text.encode()).hexdigest()
         cached_embedding = self.cache_manager.get_embedding(text_hash)
         if cached_embedding is not None:
             self.cache_stats["embedding_hits"] += 1
             self.logger.logger.debug(f"Embedding cache HIT for text hash: {text_hash[:8]}...")
             return cached_embedding
-            
         self.cache_stats["embedding_misses"] += 1
         self.logger.logger.debug(f"Embedding cache MISS for text hash: {text_hash[:8]}...")
-        
         try:
             start_time = time.time()
             # Call Ollama embedding API
@@ -498,30 +469,13 @@ class RAGSystem:
                 "model": self.embedding_model,
                 "prompt": text
             }
-            
-            response = requests.post(ollama_url, json=payload, timeout=30)
+            response = requests.post(ollama_url, json=payload)
             response.raise_for_status()
-            
-            response_data = response.json()
-            if "embedding" not in response_data:
-                self.logger.logger.error(f"No embedding in Ollama response: {response_data}")
-                return None
-                
-            embedding = response_data["embedding"]
-            
-            # Validate embedding
-            if not embedding or not isinstance(embedding, list) or len(embedding) == 0:
-                self.logger.logger.error(f"Invalid embedding received: {type(embedding)}, length: {len(embedding) if embedding else 0}")
-                return None
-            
+            embedding = response.json()["embedding"]
             self.cache_manager.set_embedding(text_hash, embedding)
             self.performance_metrics.embedding_time += time.time() - start_time
-            self.logger.logger.debug(f"Generated embedding via Ollama API (length: {len(embedding)})")
+            self.logger.logger.debug(f"Generated embedding via Ollama API")
             return embedding
-            
-        except requests.RequestException as e:
-            self.logger.log_error(e, f"generate_embedding - network error")
-            return None
         except Exception as e:
             self.logger.log_error(e, "generate_embedding")
             return None
@@ -615,133 +569,23 @@ class RAGSystem:
             if not query_embedding:
                 return {"response": "Failed to process your question. Please try again.", "error": "Embedding generation failed"}
             
-            # Step 2: Vector search in ChromaDB with improved handling
+            # Step 2: Vector search in Supabase
             search_start = time.time()
-            
-            # First, check if collection has any documents
-            try:
-                collection_count = self.collection.count()
-                self.logger.logger.debug(f"ChromaDB collection has {collection_count} documents")
-                
-                if collection_count == 0:
-                    self.logger.logger.warning("ChromaDB collection is empty - no documents have been processed")
-                    return {
-                        "response": "The knowledge base is empty. Please add some documents first.", 
-                        "documents_found": 0, 
-                        "sources": [],
-                        "error": "Empty knowledge base"
-                    }
-                    
-            except Exception as e:
-                self.logger.log_error(e, "checking collection count")
-                return {
-                    "response": "Error accessing the knowledge base.", 
-                    "error": f"Collection access error: {str(e)}"
+            response = self.supabase.rpc(
+                "match_documents", 
+                {
+                    "query_embedding": query_embedding,
+                    "match_threshold": self.vector_search_threshold,
+                    "match_count": self.vector_search_match_count
                 }
+            ).execute()
             
-            # Query ChromaDB for similar documents with expanded search
-            try:
-                # First try with higher match count and lower threshold for debugging
-                expanded_match_count = min(max(self.vector_search_match_count * 3, 15), collection_count)
-                
-                results = self.collection.query(
-                    query_embeddings=[query_embedding],
-                    n_results=expanded_match_count,
-                    include=['documents', 'metadatas', 'distances']
-                )
-                
-                self.logger.logger.debug(f"ChromaDB query returned {len(results.get('documents', [[]])[0])} results")
-                
-            except Exception as e:
-                self.logger.log_error(e, "ChromaDB query execution")
-                return {
-                    "response": "Error searching the knowledge base.", 
-                    "error": f"Search error: {str(e)}"
-                }
-            
-            # Convert ChromaDB results to documents format with improved similarity handling
-            documents = []
-            all_candidates = []  # Track all results for debugging
-            
-            if results and results.get('documents') and results['documents'][0]:
-                for i, (content, metadata, distance) in enumerate(zip(
-                    results['documents'][0], 
-                    results['metadatas'][0], 
-                    results['distances'][0]
-                )):
-                    # Convert distance to similarity score 
-                    # ChromaDB uses cosine distance where 0 = identical, 2 = opposite
-                    # Convert to similarity: 1.0 = identical, 0.0 = completely different
-                    similarity = max(0.0, 1.0 - (distance / 2.0))
-                    
-                    candidate_doc = {
-                        'content': content,
-                        'metadata': metadata,
-                        'similarity': similarity,
-                        'distance': distance,
-                        'file_path': metadata.get('file_path', ''),
-                        'chunk_index': metadata.get('chunk_index', 0)
-                    }
-                    
-                    all_candidates.append(candidate_doc)
-                    
-                    # Use adaptive threshold - if we have very few good matches, lower the bar
-                    adaptive_threshold = self.vector_search_threshold
-                    if len([c for c in all_candidates if c['similarity'] >= self.vector_search_threshold]) < 2:
-                        adaptive_threshold = max(0.3, self.vector_search_threshold * 0.7)
-                        self.logger.logger.debug(f"Applied adaptive threshold: {adaptive_threshold:.3f}")
-                    
-                    # Filter by similarity threshold
-                    if similarity >= adaptive_threshold:
-                        documents.append(candidate_doc)
-                        self.logger.logger.debug(f"Added document with similarity {similarity:.3f}")
-                    else:
-                        self.logger.logger.debug(f"Filtered out document with similarity {similarity:.3f} (threshold: {adaptive_threshold:.3f})")
-                
-                # Log search results for debugging
-                if all_candidates:
-                    best_score = max(c['similarity'] for c in all_candidates)
-                    avg_score = sum(c['similarity'] for c in all_candidates) / len(all_candidates)
-                    self.logger.logger.debug(
-                        f"Search analysis: Best similarity: {best_score:.3f}, "
-                        f"Average: {avg_score:.3f}, "
-                        f"Results above threshold: {len(documents)}/{len(all_candidates)}"
-                    )
-                else:
-                    self.logger.logger.warning("No candidate documents returned from ChromaDB")
-            else:
-                self.logger.logger.warning("ChromaDB returned empty results structure")
-            
-            # Sort documents by similarity score (highest first)
-            documents.sort(key=lambda x: x['similarity'], reverse=True)
-            
-            # Limit to original match count for final results
-            documents = documents[:self.vector_search_match_count]
-            
+            documents = response.data if response.data else []
             self.performance_metrics.search_time += time.time() - search_start
             self.performance_metrics.num_documents_retrieved = len(documents)
             
-            # Enhanced no-results handling with helpful feedback
             if not documents:
-                best_similarity = max((c['similarity'] for c in all_candidates), default=0.0)
-                threshold_info = f"Your question didn't match any documents above the similarity threshold of {self.vector_search_threshold:.1%}."
-                
-                if all_candidates:
-                    threshold_info += f" The best match was {best_similarity:.1%} similar."
-                    if best_similarity > 0.2:  # If there was some similarity
-                        threshold_info += " Try rephrasing your question or using different keywords."
-                
-                return {
-                    "response": f"{self.ai_default_no_response} {threshold_info}", 
-                    "documents_found": 0, 
-                    "sources": [],
-                    "debug_info": {
-                        "best_similarity": best_similarity,
-                        "threshold_used": self.vector_search_threshold,
-                        "total_candidates": len(all_candidates),
-                        "collection_size": collection_count
-                    }
-                }
+                return {"response": self.ai_default_no_response, "documents_found": 0, "sources": []}
             
             # Step 3: Extract and manage context with source tracking
             context_parts = []
@@ -850,31 +694,23 @@ class RAGSystem:
             }
 
     def delete_file_embeddings(self, file_id: str) -> bool:
-        """Delete all embeddings associated with a file from ChromaDB."""
+        """Delete all embeddings associated with a file (by stem) from Supabase."""
         try:
             # Get the full file path using DOCUMENTS_DIR and filename
             documents_dir = os.getenv("DOCUMENTS_DIR", "./data/documents")
             file_path = os.path.normpath(os.path.join(documents_dir, file_id))
 
-            # Get all documents from the collection
-            all_docs = self.collection.get()
-            
-            # Find IDs of documents that match the filename
-            ids_to_delete = []
-            for i, metadata in enumerate(all_docs['metadatas']):
-                if metadata.get('filename') == os.path.splitext(file_id)[0]:
-                    ids_to_delete.append(all_docs['ids'][i])
-            
-            # Delete the matching documents
-            if ids_to_delete:
-                self.collection.delete(ids=ids_to_delete)
-                self.logger.logger.info(
-                    f"Deleted {len(ids_to_delete)} embeddings for file '{file_id}' from ChromaDB"
-                )
-            else:
-                self.logger.logger.info(
-                    f"No embeddings found for file '{file_id}' in ChromaDB"
-                )
+            # Delete from Supabase using both filename and file_path for safety
+            delete_response = (
+                self.supabase.table("nomic_embeddings")
+                .delete()
+                .eq("filename", file_id)
+                .execute()
+            )
+            deleted_count = getattr(delete_response, "count", None)
+            self.logger.logger.info(
+                f"Deleted embeddings for file '{file_id}' (path: {file_path}) from Supabase. Rows deleted: {deleted_count}"
+            )
             return True
         except Exception as e:
             self.logger.log_error(e, f"delete_embeddings_for_file: {file_id}")
@@ -1151,13 +987,7 @@ class RAGSystem:
             texts = [doc.page_content for doc in split_docs]
             embeddings = self.generate_embeddings_batch(texts)
             
-            # Prepare data for ChromaDB
-            documents_to_add = []
-            metadatas_to_add = []
-            embeddings_to_add = []
-            ids_to_add = []
-            
-            # Upload to ChromaDB with enhanced metadata
+            # Upload to Supabase with enhanced metadata
             for i, (doc, embedding) in enumerate(zip(split_docs, embeddings)):
                 if not embedding:
                     continue
@@ -1178,26 +1008,22 @@ class RAGSystem:
                 content_preview = doc.page_content[:200] + "..." if len(doc.page_content) > 200 else doc.page_content
                 metadata["content_preview"] = content_preview
                 
-                # Create unique ID for the document chunk
-                doc_id = f"{filename_no_ext}_chunk_{i}_{hashlib.md5(doc.page_content.encode()).hexdigest()[:8]}"
+                # Store embedding as a Python list for VECTOR(768) type
+                embedding_vector = embedding  # Pass as list of floats
+                data = {
+                    "content": doc.page_content,
+                    "embedding": embedding_vector,
+                    "metadata": json.dumps(metadata),
+                    "file_path": file_path,
+                    "chunk_index": i,
+                    "filename": filename_no_ext,
+                    "file_type": file_extension
+                }
                 
-                documents_to_add.append(doc.page_content)
-                metadatas_to_add.append(metadata)
-                embeddings_to_add.append(embedding)
-                ids_to_add.append(doc_id)
-            
-            # Add all documents to ChromaDB in batch
-            if documents_to_add:
                 try:
-                    self.collection.add(
-                        documents=documents_to_add,
-                        metadatas=metadatas_to_add,
-                        embeddings=embeddings_to_add,
-                        ids=ids_to_add
-                    )
-                    self.logger.logger.info(f"Added {len(documents_to_add)} chunks to ChromaDB for file: {filename}")
+                    self.supabase.table("nomic_embeddings").insert(data).execute()
                 except Exception as e:
-                    self.logger.log_error(e, f"adding documents to ChromaDB for {filename}")
+                    self.logger.log_error(e, f"uploading chunk {i} of {filename}")
                     
         except Exception as e:
             self.logger.log_error(e, f"process_file: {filename}")
@@ -1211,109 +1037,6 @@ class RAGSystem:
         except Exception as e:
             self.logger.log_error(e, "save_processed_file")
 
-
-    def get_chromadb_diagnostics(self) -> Dict[str, Any]:
-        """Get diagnostic information about the ChromaDB collection"""
-        try:
-            collection_count = self.collection.count()
-            
-            # Get a sample of documents
-            sample_size = min(5, collection_count)
-            sample_results = None
-            
-            if collection_count > 0:
-                try:
-                    sample_results = self.collection.get(limit=sample_size, include=['documents', 'metadatas'])
-                except Exception as e:
-                    self.logger.log_error(e, "getting sample documents")
-            
-            # Extract metadata information
-            unique_files = set()
-            total_chunks = 0
-            
-            if sample_results and sample_results.get('metadatas'):
-                for metadata in sample_results['metadatas']:
-                    unique_files.add(metadata.get('filename', 'unknown'))
-                    total_chunks += 1
-            
-            return {
-                "collection_name": self.collection_name,
-                "collection_path": self.chromadb_path,
-                "total_documents": collection_count,
-                "sample_documents": sample_size,
-                "unique_files_in_sample": len(unique_files),
-                "file_names_in_sample": list(unique_files),
-                "search_threshold": self.vector_search_threshold,
-                "search_match_count": self.vector_search_match_count,
-                "embedding_model": self.embedding_model,
-                "sample_metadata": sample_results.get('metadatas', [])[:2] if sample_results else None,
-                "collection_status": "healthy" if collection_count > 0 else "empty"
-            }
-            
-        except Exception as e:
-            self.logger.log_error(e, "chromadb_diagnostics")
-            return {
-                "error": str(e),
-                "collection_status": "error"
-            }
-
-    def search_similar_documents(self, query: str, top_k: int = 10, return_raw: bool = False) -> Dict[str, Any]:
-        """
-        Search for similar documents with detailed results for debugging
-        
-        Args:
-            query: Search query
-            top_k: Number of results to return
-            return_raw: If True, return raw ChromaDB results
-        """
-        try:
-            # Generate embedding for query
-            query_embedding = self.generate_embedding(query)
-            if not query_embedding:
-                return {"error": "Failed to generate embedding for query"}
-            
-            # Query ChromaDB
-            results = self.collection.query(
-                query_embeddings=[query_embedding],
-                n_results=top_k,
-                include=['documents', 'metadatas', 'distances']
-            )
-            
-            if return_raw:
-                return {"raw_results": results}
-            
-            # Process results
-            processed_results = []
-            if results and results.get('documents') and results['documents'][0]:
-                for i, (content, metadata, distance) in enumerate(zip(
-                    results['documents'][0], 
-                    results['metadatas'][0], 
-                    results['distances'][0]
-                )):
-                    similarity = max(0.0, 1.0 - (distance / 2.0))
-                    
-                    processed_results.append({
-                        'rank': i + 1,
-                        'similarity': round(similarity, 4),
-                        'distance': round(distance, 4),
-                        'content_preview': content[:200] + "..." if len(content) > 200 else content,
-                        'filename': metadata.get('filename', 'unknown'),
-                        'chunk_index': metadata.get('chunk_index', 0),
-                        'file_path': metadata.get('file_path', ''),
-                        'metadata': metadata
-                    })
-            
-            return {
-                "query": query,
-                "total_results": len(processed_results),
-                "results": processed_results,
-                "search_threshold": self.vector_search_threshold,
-                "above_threshold": len([r for r in processed_results if r['similarity'] >= self.vector_search_threshold])
-            }
-            
-        except Exception as e:
-            self.logger.log_error(e, "search_similar_documents")
-            return {"error": str(e)}
 
     def get_performance_report(self) -> Dict[str, Any]:
         """Get detailed performance report including cache statistics and API call tracking"""

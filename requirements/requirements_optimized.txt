@@ -3,7 +3,7 @@
 
 # Core dependencies
 openai>=1.0.0
-chromadb>=0.4.22
+supabase>=2.0.0
 python-dotenv>=1.0.0
 
 # Document processing
