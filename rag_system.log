@@ -110,3 +110,14 @@ postgrest.exceptions.APIError: {'code': '22000', 'details': None, 'hint': None, 
 2025-08-25 22:00:16,655 - PersistentCache - INFO - Loaded response_cache with 7 items
 2025-08-25 22:00:16,656 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
 2025-08-25 22:00:16,664 - RAGSystem - INFO - No new files to process
+2025-08-30 20:10:41,081 - PersistentCache - INFO - Loaded embedding_cache with 16 items
+2025-08-30 20:10:41,109 - PersistentCache - INFO - Loaded response_cache with 7 items
+2025-08-30 20:10:41,110 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-08-30 20:10:41,135 - RAGSystem - INFO - No new files to process
+2025-08-30 20:11:05,939 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-30 20:11:19,460 - RAGSystem - INFO - Query classified as 'domain_specific' with confidence 0.85, routing to 'knowledge_base' (method: hybrid_llm_fallback)
+2025-08-30 20:11:27,532 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-08-30 20:11:35,620 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-08-30 20:11:48,561 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-08-30 20:11:48,569 - RAGSystem - INFO - Query processed: 34 chars, 47.88s, 5 docs retrieved
+2025-08-30 20:11:48,569 - RAGSystem - INFO - Performance - Embedding: 1.87s, Search: 8.95s, Generation: 3.18s, Total: 47.88s
