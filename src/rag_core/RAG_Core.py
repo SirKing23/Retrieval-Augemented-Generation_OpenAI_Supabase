@@ -412,6 +412,7 @@ class RAGSystem:
             "knowledge_base_route": 0,
             "fallback_route": 0,
             "cache_hits": 0,
+            "sources_excluded_irrelevant": 0,
             "classification_method": {
                 "rule_based": 0,
                 "llm_fallback": 0,
@@ -648,6 +649,101 @@ Respond with ONLY the category name (general_knowledge, domain_specific, or ambi
         llm_result["method"] = "hybrid_llm_fallback"
         
         return llm_result
+
+    def assess_document_relevance(self, question: str, documents: List[Dict[str, Any]], classification: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Assess whether retrieved documents are actually relevant to the user's query.
+        Returns analysis with recommendations for source inclusion.
+        """
+        try:
+            if not documents:
+                return {
+                    "relevant_documents": [],
+                    "relevance_score": 0.0,
+                    "should_include_sources": False,
+                    "assessment_reason": "No documents retrieved"
+                }
+            
+            # Extract document contents for analysis
+            doc_previews = []
+            for i, doc in enumerate(documents[:3]):  # Only analyze top 3 documents
+                content_preview = doc.get("content", "")[:300]  # First 300 chars
+                doc_previews.append(f"Document {i+1}: {content_preview}")
+            
+            combined_content = "\n\n".join(doc_previews)
+            
+            # Create relevance assessment prompt
+            relevance_prompt = f"""Assess if the provided documents are relevant to answering the user's question.
+
+User Question: "{question}"
+
+Documents Retrieved:
+{combined_content}
+
+Task: Determine if these documents contain information that would help answer the user's question.
+
+Respond with one of these categories:
+- "HIGHLY_RELEVANT": Documents directly address the question and contain specific information to answer it
+- "SOMEWHAT_RELEVANT": Documents contain related information but may not fully answer the question  
+- "NOT_RELEVANT": Documents do not contain information relevant to answering the question
+
+Respond with ONLY the category name. No explanation needed."""
+            
+            # Call LLM for relevance assessment
+            response = self.ai_instance.chat.completions.create(
+                model=self.config.classification_model,
+                messages=[{"role": "user", "content": relevance_prompt}],
+                max_tokens=20,
+                temperature=0.1
+            )
+            
+            # Track API call
+            self.api_call_stats["openai_chat_calls"] += 1
+            self.api_call_stats["total_openai_calls"] += 1
+            if hasattr(response, 'usage') and response.usage:
+                tokens_used = getattr(response.usage, 'total_tokens', 0)
+                self.api_call_stats["chat_tokens_used"] += tokens_used
+                self.api_call_stats["total_tokens_used"] += tokens_used
+            
+            relevance_assessment = response.choices[0].message.content.strip().upper()
+            
+            # Determine relevance score and inclusion decision
+            if "HIGHLY" in relevance_assessment:
+                relevance_score = 0.9
+                should_include_sources = True
+                reason = "Documents are highly relevant to the query"
+                relevant_docs = documents
+            elif "SOMEWHAT" in relevance_assessment:
+                relevance_score = 0.6
+                # Include sources for domain-specific queries, exclude for general knowledge
+                should_include_sources = classification.get("category") in ["domain_specific", "ambiguous"]
+                reason = "Documents are somewhat relevant, inclusion based on query type"
+                relevant_docs = documents if should_include_sources else []
+            else:  # NOT_RELEVANT
+                relevance_score = 0.2
+                should_include_sources = False
+                reason = "Documents are not relevant to the query"
+                relevant_docs = []
+            
+            return {
+                "relevant_documents": relevant_docs,
+                "relevance_score": relevance_score,
+                "should_include_sources": should_include_sources,
+                "assessment_reason": reason,
+                "llm_assessment": relevance_assessment
+            }
+            
+        except Exception as e:
+            self.logger.log_error(e, "assess_document_relevance")
+            # Fallback: be conservative and include sources for domain-specific queries
+            conservative_include = classification.get("category") in ["domain_specific"]
+            return {
+                "relevant_documents": documents if conservative_include else [],
+                "relevance_score": 0.5,
+                "should_include_sources": conservative_include,
+                "assessment_reason": "Relevance assessment failed, using conservative approach",
+                "error": str(e)
+            }
 
     def answer_direct(self, question: str) -> Dict[str, Any]:
         """
@@ -1083,32 +1179,65 @@ Respond with ONLY the category name (general_knowledge, domain_specific, or ambi
                         "classification": classification
                     }
             
-            # Step 7: Extract and manage context with source tracking
+            # Step 7: Assess document relevance before processing
+            relevance_analysis = self.assess_document_relevance(question, documents, classification)
+            self.logger.logger.info(f"Document relevance assessment: {relevance_analysis['assessment_reason']} (score: {relevance_analysis['relevance_score']:.2f})")
+            
+            # If documents are not relevant and query seems like general knowledge, fall back to direct answer
+            if not relevance_analysis["should_include_sources"] and classification.get("category") in ["general_knowledge", "ambiguous"]:
+                self.logger.logger.info("Documents not relevant for general knowledge query, providing direct answer")
+                self.routing_stats["fallback_route"] += 1
+                fallback_response = self.answer_direct(question)
+                fallback_response["route_used"] = "fallback_direct_irrelevant"
+                fallback_response["classification"] = classification
+                fallback_response["relevance_analysis"] = relevance_analysis
+                fallback_response["fallback_reason"] = "Retrieved documents not relevant to general knowledge query"
+                return fallback_response
+            
+            # Step 8: Extract and manage context with source tracking
+            # Use only relevant documents for context and sources
+            relevant_documents = relevance_analysis["relevant_documents"]
             context_parts = []
             source_documents = []
             
+            # Always use retrieved documents for context (even if not showing as sources)
+            # This allows the LLM to see what was found and decide how to handle it
             for i, doc in enumerate(documents):
                 context_parts.append(doc["content"])
-                
-                # Extract source information
-                metadata = json.loads(doc.get("metadata", "{}")) if isinstance(doc.get("metadata"), str) else doc.get("metadata", {})
-                source_info = self._extract_source_info(doc, metadata, i)
-                source_documents.append(source_info)
+            
+            # Only include source information if documents are deemed relevant
+            if relevance_analysis["should_include_sources"]:
+                for i, doc in enumerate(relevant_documents):
+                    # Extract source information
+                    metadata = json.loads(doc.get("metadata", "{}")) if isinstance(doc.get("metadata"), str) else doc.get("metadata", {})
+                    source_info = self._extract_source_info(doc, metadata, i)
+                    source_documents.append(source_info)
+            else:
+                # Track when sources are excluded due to irrelevance
+                self.routing_stats["sources_excluded_irrelevant"] += 1
             
             context = "\n".join(context_parts)
             context = self._manage_context_window(context)
             
-            # Step 8: Optimize chat history
+            # Step 9: Optimize chat history
             self._optimize_chat_history()
             
-            # Step 9: Construct message history with enhanced system prompt
+            # Step 10: Construct message history with enhanced system prompt
             messages = []
             
             if not self.is_initial_session:
-                enhanced_system_prompt = f"""You are a helpful assistant with access to relevant documents and chat history. 
-                The user's query was classified as '{classification['category']}' and routed to the knowledge base.
-                Use the provided reference documents to answer the question accurately. If the documents don't contain 
-                relevant information, acknowledge this limitation and provide what help you can based on general knowledge."""
+                # Create enhanced system prompt based on relevance assessment
+                if relevance_analysis["should_include_sources"]:
+                    enhanced_system_prompt = f"""You are a helpful assistant with access to relevant documents and chat history. 
+                    The user's query was classified as '{classification['category']}' and routed to the knowledge base.
+                    The retrieved documents have been assessed as relevant (relevance score: {relevance_analysis['relevance_score']:.2f}).
+                    Use the provided reference documents to answer the question accurately. Cite the sources when the information comes from the documents."""
+                else:
+                    enhanced_system_prompt = f"""You are a helpful assistant with access to documents and chat history. 
+                    The user's query was classified as '{classification['category']}' and routed to the knowledge base.
+                    However, the retrieved documents were assessed as not directly relevant to the question (relevance score: {relevance_analysis['relevance_score']:.2f}).
+                    Answer the question using your general knowledge. Do not cite the provided documents as sources since they are not relevant to this specific question."""
+                
                 messages = [{"role": "system", "content": enhanced_system_prompt}]
                 self.is_initial_session = True
                 
@@ -1120,7 +1249,8 @@ Respond with ONLY the category name (general_knowledge, domain_specific, or ambi
             combined_input = f"[Reference Documents]\n{context}\n\n{question}"
             messages.append({"role": "user", "content": combined_input})
             
-            # Step 10: Call OpenAI with error handling
+            # Step 11: Call OpenAI with error handling
+            # Step 11: Call OpenAI with error handling
             generation_start = time.time()
             chat_response = self.ai_instance.chat.completions.create(
                 model=self.ai_main_model,
@@ -1141,7 +1271,7 @@ Respond with ONLY the category name (general_knowledge, domain_specific, or ambi
             
             self.logger.logger.debug(f"Generated chat response via API call (total chat calls: {self.api_call_stats['openai_chat_calls']})")
             
-            # Step 11: Get AI response and update history
+            # Step 12: Get AI response and update history
             answer = chat_response.choices[0].message.content
             
             # Update chat history for memory
@@ -1162,10 +1292,12 @@ Respond with ONLY the category name (general_knowledge, domain_specific, or ambi
                 "documents_found": len(documents),
                 "response_time": total_time,
                 "performance_metrics": self.performance_metrics,
-                "sources": source_documents,
+                "sources": source_documents,  # Only includes sources if deemed relevant
                 "cached": False,
                 "route_used": "knowledge_base",
-                "classification": classification
+                "classification": classification,
+                "relevance_analysis": relevance_analysis,
+                "sources_included": relevance_analysis["should_include_sources"]
             }
             
             # Cache the response for future use
