@@ -335,3 +335,16 @@ UnboundLocalError: cannot access local variable 'response_data' where it is not 
 2025-09-10 09:58:38,031 - RAGSystem - INFO - Query processed: 36 chars, 63.56s, 3 docs retrieved
 2025-09-10 09:58:38,031 - RAGSystem - INFO - Performance - Embedding: 5.91s, Search: 35.33s, Generation: 33.96s, Total: 63.56s
 2025-09-10 09:58:41,161 - PersistentCache - INFO - Saved caches: 25 embeddings, 16 responses
+2025-09-10 10:11:30,551 - PersistentCache - INFO - Loaded embedding_cache with 25 items
+2025-09-10 10:11:30,585 - PersistentCache - INFO - Loaded response_cache with 16 items
+2025-09-10 10:11:30,585 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-09-10 10:11:30,585 - RAGSystem - INFO - No new files to process
+2025-09-10 10:12:33,306 - RAGSystem - INFO - Query classified as 'general_knowledge' with confidence 0.80, routing to 'direct' (method: rule_based)
+2025-09-10 10:12:34,388 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-10 10:12:34,433 - RAGSystem - INFO - Direct answer generated in 1.13s
+2025-09-10 10:12:34,433 - PersistentCache - INFO - Saved caches: 25 embeddings, 17 responses
+2025-09-10 10:13:11,344 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-09-10 10:13:11,359 - RAGSystem - INFO - Query classified as 'domain_specific' with confidence 0.85, routing to 'knowledge_base' (method: hybrid_llm_fallback)
+2025-09-10 10:13:12,508 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-09-10 10:13:12,529 - PersistentCache - INFO - Saved caches: 26 embeddings, 17 responses
+2025-09-10 10:13:14,720 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
