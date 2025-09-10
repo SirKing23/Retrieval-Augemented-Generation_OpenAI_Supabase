@@ -214,16 +214,23 @@ class PersistentCacheManager:
         return self.embedding_cache.get(text_hash)
     
     def set_embedding(self, text_hash: str, embedding: List[float]) -> bool:
-        """Set embedding in cache"""
+        """Set embedding in cache and save to disk"""
         self.embedding_cache[text_hash] = embedding
-        return True
+        
+        # Save to disk immediately to ensure persistence
+        try:
+            self.save_to_disk()
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to save embedding cache to disk: {e}")
+            return False
     
     def get_response(self, question_hash: str) -> Optional[Dict[str, Any]]:
         """Get response from cache"""
         return self.response_cache.get(question_hash)
     
     def set_response(self, question_hash: str, response_data: Dict[str, Any]) -> bool:
-        """Set response in cache"""
+        """Set response in cache and save to disk"""
         # Store response with timestamp
         cache_entry = {
             "response": response_data,
@@ -231,7 +238,14 @@ class PersistentCacheManager:
             "cached": True
         }
         self.response_cache[question_hash] = cache_entry
-        return True
+        
+        # Save to disk immediately to ensure persistence
+        try:
+            self.save_to_disk()
+            return True
+        except Exception as e:
+            self.logger.error(f"Failed to save response cache to disk: {e}")
+            return False
     
     def _cleanup_old_entries(self):
         """Remove old cache entries to manage size"""
@@ -758,10 +772,13 @@ Respond with ONLY the category name. No explanation needed."""
             For general knowledge questions, provide accurate information. For conversational queries, respond naturally and friendly.
             For calculations, show your work. If you're not certain about factual information, acknowledge the limitation."""
             
-            messages = [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": question}
-            ]
+            # Build messages and include the last 5 chat history items (if any)
+            messages = [{"role": "system", "content": system_prompt}]
+            if self.chat_history:
+                messages.append({"role": "system", "content": "Chat history follows:"})
+                # include up to the last 5 messages for context
+                messages += self.chat_history[-5:]
+            messages.append({"role": "user", "content": question})
             
             # Generate response
             chat_response = self.ai_instance.chat.completions.create(
@@ -1092,16 +1109,33 @@ Respond with ONLY the category name. No explanation needed."""
         # Track total queries
         self.routing_stats["total_queries"] += 1
         
-        # Sanitize input
+        # Step 1: Sanitize user query
         question = self.sanitize_input(question)
         if not question:
             return {"response": "Invalid input provided.", "error": "Input validation failed"}
         
-        # Step 1: Classify query intent for routing decision
+
+        # Check persistent cache first
+        question_hash = hashlib.md5(question.encode()).hexdigest()
+        cached_response = self.cache_manager.get_response(question_hash)
+        if cached_response is not None:
+            self.cache_stats["response_hits"] += 1
+            self.routing_stats["cache_hits"] += 1
+            self.logger.logger.debug(f"Response cache HIT for question hash: {question_hash[:8]}...")
+            cached_data = cached_response["response"]
+            cached_data["cached"] = True
+            cached_data["cache_timestamp"] = cached_response["timestamp"]
+            return cached_data
+        
+        # Cache miss - continue with knowledge base processing
+        self.cache_stats["response_misses"] += 1     
+        self.logger.logger.debug(f"Response cache MISS for question hash: {question_hash[:8]}...")
+
+        # Step 2: Classify query intent for routing decision
         classification = self.classify_query_intent(question)
         route_decision = classification["route"]
         
-        # Track classification method used
+        # Step 3: Track classification method used
         method = classification.get("method", "unknown")
         if method == "rule_based":
             self.routing_stats["classification_method"]["rule_based"] += 1
@@ -1112,40 +1146,29 @@ Respond with ONLY the category name. No explanation needed."""
         
         self.logger.logger.info(f"Query classified as '{classification['category']}' with confidence {classification['confidence']:.2f}, routing to '{route_decision}' (method: {method})")
         
-        # Step 2: Route based on classification
+        
+
+        # Step 4: Route based on classification
         if route_decision == "direct":
             # Handle with direct LLM response (no knowledge base)
             self.routing_stats["direct_route"] += 1
             response_data = self.answer_direct(question)
-            response_data["classification"] = classification
+            
+            self.cache_manager.set_response(question_hash, response_data)
             return response_data
         
-        # Step 3: Knowledge base route - check response cache first
-        question_hash = hashlib.md5(question.encode()).hexdigest()
-        cached_response = self.cache_manager.get_response(question_hash)
-        if cached_response is not None:
-            self.cache_stats["response_hits"] += 1
-            self.routing_stats["cache_hits"] += 1
-            self.logger.logger.debug(f"Response cache HIT for question hash: {question_hash[:8]}...")
-            cached_data = cached_response["response"]
-            cached_data["cached"] = True
-            cached_data["cache_timestamp"] = cached_response["timestamp"]
-            cached_data["classification"] = classification
-            return cached_data
+        # Step 5: Knowledge base route - check response cache first
         
-        # Cache miss - continue with knowledge base processing
-        self.cache_stats["response_misses"] += 1
-        self.routing_stats["knowledge_base_route"] += 1
-        self.logger.logger.debug(f"Response cache MISS for question hash: {question_hash[:8]}...")
         
         try:
-            # Step 4: Convert query to embedding
+            self.routing_stats["knowledge_base_route"] += 1
+            # Step 6: Convert query to embedding
             embedding_start = time.time()
             query_embedding = self.generate_embedding(question)
             if not query_embedding:
                 return {"response": "Failed to process your question. Please try again.", "error": "Embedding generation failed"}
             
-            # Step 5: Vector search in Supabase
+            # Step 7: Vector search in Supabase
             search_start = time.time()
             response = self.supabase.rpc(
                 "match_documents", 
@@ -1160,15 +1183,16 @@ Respond with ONLY the category name. No explanation needed."""
             self.performance_metrics.search_time += time.time() - search_start
             self.performance_metrics.num_documents_retrieved = len(documents)
             
-            # Step 6: Handle no documents found - fallback to direct answer if confidence is low
+            # Step 8: Handle no documents found - fallback to direct answer if confidence is low
             if not documents:
-                if classification["confidence"] < 0.7:
+                if classification["confidence"] <= 0.7:
                     self.logger.logger.info("No documents found and low confidence, falling back to direct answer")
                     self.routing_stats["fallback_route"] += 1
                     fallback_response = self.answer_direct(question)
                     fallback_response["route_used"] = "fallback_direct"
                     fallback_response["classification"] = classification
                     fallback_response["fallback_reason"] = "No relevant documents found in knowledge base"
+                    self.cache_manager.set_response(question_hash, fallback_response)
                     return fallback_response
                 else:
                     return {
@@ -1179,7 +1203,7 @@ Respond with ONLY the category name. No explanation needed."""
                         "classification": classification
                     }
             
-            # Step 7: Assess document relevance before processing
+            # Step 9: Assess document relevance before processing
             relevance_analysis = self.assess_document_relevance(question, documents, classification)
             self.logger.logger.info(f"Document relevance assessment: {relevance_analysis['assessment_reason']} (score: {relevance_analysis['relevance_score']:.2f})")
             
@@ -1189,12 +1213,11 @@ Respond with ONLY the category name. No explanation needed."""
                 self.routing_stats["fallback_route"] += 1
                 fallback_response = self.answer_direct(question)
                 fallback_response["route_used"] = "fallback_direct_irrelevant"
-                fallback_response["classification"] = classification
                 fallback_response["relevance_analysis"] = relevance_analysis
                 fallback_response["fallback_reason"] = "Retrieved documents not relevant to general knowledge query"
                 return fallback_response
             
-            # Step 8: Extract and manage context with source tracking
+            # Step 10: Extract and manage context with source tracking
             # Use only relevant documents for context and sources
             relevant_documents = relevance_analysis["relevant_documents"]
             context_parts = []
@@ -1243,13 +1266,14 @@ Respond with ONLY the category name. No explanation needed."""
                 
             if self.chat_history:
                 messages.append({"role": "system", "content": "Chat history follows:"})
-                messages += self.chat_history
+                # Limit to last 5 chat history messages
+                messages += self.chat_history[-5:]
                 
             # Add the current user query with retrieved context
             combined_input = f"[Reference Documents]\n{context}\n\n{question}"
             messages.append({"role": "user", "content": combined_input})
             
-            # Step 11: Call OpenAI with error handling
+         
             # Step 11: Call OpenAI with error handling
             generation_start = time.time()
             chat_response = self.ai_instance.chat.completions.create(
@@ -1274,7 +1298,7 @@ Respond with ONLY the category name. No explanation needed."""
             # Step 12: Get AI response and update history
             answer = chat_response.choices[0].message.content
             
-            # Update chat history for memory
+           # Step 13:Update chat history for memory
             self.chat_history.append({"role": "user", "content": question})
             self.chat_history.append({"role": "assistant", "content": answer})
             

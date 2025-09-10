@@ -8,6 +8,8 @@ import os
 import time
 import sys
 from pathlib import Path
+from dotenv import load_dotenv
+
 
 # Add the rag_core to Python path for importing
 current_dir = Path(__file__).parent.absolute()
@@ -18,6 +20,7 @@ from RAG_Core import RAGSystem, RAGSystemConfig
 
 def find_documents_folder():
     """Find a suitable documents folder to process"""
+    load_dotenv()
     possible_paths = [
         os.getenv("DOCUMENTS_DIR") 
     ]
