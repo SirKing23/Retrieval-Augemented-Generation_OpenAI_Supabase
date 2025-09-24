@@ -775,6 +775,10 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
     padding: var(--spacing-lg);
+    margin-left: 0;
+    margin-right: 0;
+    max-width: none;
+    box-sizing: border-box;
 }
 
 .documents-header {
@@ -905,9 +909,19 @@ body {
 }
 
 /* Upload */
-.upload-container {
-    display: grid;
-    grid-template-columns: 2fr 1fr;
+
+/* Upload container should be full width and stack children vertically */
+.upload-container {  
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-lg);
+    margin-left: var(--spacing-xl);
+    margin-right: var(--spacing-xl);
+    max-width: calc(100vw - 2 * var(--spacing-xl));
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
     gap: var(--spacing-xl);
 }
 
@@ -919,6 +933,16 @@ body {
     text-align: center;
     transition: var(--transition);
     cursor: pointer;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Always display upload-queue under upload-container */
+.upload-queue {
+    width: 100%;
+    margin-top: var(--spacing-lg);
+    display: block;
+    max-width: 100%;
 }
 
 .upload-area:hover,
@@ -960,20 +984,7 @@ body {
     background: var(--primary-hover);
 }
 
-.upload-info {
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
-    padding: var(--spacing-lg);
-    height: fit-content;
-}
 
-.upload-info h4 {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: var(--spacing-md);
-}
 
 .format-list {
     display: flex;
@@ -981,7 +992,7 @@ body {
     gap: var(--spacing-sm);
 }
 
-.format-item {
+/* .format-item {
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
@@ -990,7 +1001,7 @@ body {
     border-radius: var(--border-radius);
     font-size: 14px;
     color: var(--text-secondary);
-}
+} */
 
 /* Processing */
 .processing-container {
@@ -1004,9 +1015,9 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-lg);
     padding: var(--spacing-xl);
-}
-
-.status-card {
+        margin-left: var(--spacing-xl);
+        margin-right: var(--spacing-xl);
+        max-width: calc(100vw - 2 * var(--spacing-xl));
     text-align: center;
 }
 
@@ -1272,17 +1283,6 @@ body {
 
 .toast.show {
     transform: translateX(0);
-}
-
-.toast-content {
-    display: flex;
-    align-items: center;
-    gap: var(--spacing-md);
-}
-
-.toast-icon {
-    color: var(--success-color);
-    font-size: 20px;
 }
 
 .toast-message {

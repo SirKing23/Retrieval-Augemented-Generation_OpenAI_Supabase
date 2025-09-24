@@ -1,7 +1,7 @@
 @echo off
 echo.
 echo ===================================
-echo   RAG System Web Interface
+echo   AnswerFlow Server
 echo ===================================
 echo.
 

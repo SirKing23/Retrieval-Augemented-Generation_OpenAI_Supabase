@@ -25,6 +25,19 @@ class RAGApp {
     }
 
     setupEventListeners() {
+        // Chat attachment button (for chat input area)
+        const chatAttachmentBtn = document.getElementById('chat-attachment-btn');
+        const chatFileInput = document.getElementById('chat-file-input');
+        if (chatAttachmentBtn && chatFileInput) {
+            chatAttachmentBtn.addEventListener('click', function() {
+                chatFileInput.value = '';
+                chatFileInput.click();
+            });
+            chatFileInput.addEventListener('change', function(event) {
+                // You can handle the selected file here if needed
+                // Example: const file = event.target.files[0];
+            });
+        }
         // Navigation
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
@@ -499,10 +512,11 @@ class RAGApp {
         queueContainer.innerHTML = `
             <div class="upload-queue-header">
                 <h4>Upload Queue (${files.length} files)</h4>
+                
                 <button class="primary-btn" id="upload-all-btn">
                     <i class="fas fa-upload"></i>
                     Upload All
-                </button>
+                </button>              
             </div>
             <div class="upload-items">
                 ${files.map((file, index) => `
@@ -849,15 +863,7 @@ class RAGApp {
     }
 
     // Document view toggles
-    toggleDocumentView(viewType) {
-        const buttons = document.querySelectorAll('.control-btn');
-        buttons.forEach(btn => btn.classList.remove('active'));
-        
-        event.target.classList.add('active');
-        
-        // Implement grid vs list view
-        this.showNotification(`Switched to ${viewType} view`, 'info');
-    }
+  
 }
 
 // Global functions for onclick handlers

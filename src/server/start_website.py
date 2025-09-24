@@ -19,7 +19,7 @@ except ImportError:
 
 def check_requirements():
     """Check if required packages are installed"""
-    print("🔍 Checking requirements...")
+    print("Checking system requirements...")
     
     required_packages = [
         'fastapi',
@@ -48,7 +48,7 @@ def check_requirements():
 
 def check_environment_variables():
     """Check if required environment variables are set"""
-    print("\n🔍 Checking environment variables...")
+    print("\n Checking environment variables...")
     
     required_vars = {
         "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
@@ -74,7 +74,7 @@ def check_environment_variables():
 
 def check_documents_folder():
     """Check if documents folder exists"""
-    print("\n🔍 Checking documents folder...")
+    print("\n Checking documents folder...")
     
     # Get documents directory from environment variable
     documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
@@ -87,10 +87,10 @@ def check_documents_folder():
         if doc_files:
             print(f"✅ {docs_folder} folder exists with {len(doc_files)} documents")
             print("📄 Documents found:")
-            for doc in doc_files[:5]:  # Show first 5
+            for doc in doc_files[:10]:  # Show first 10
                 print(f"   - {doc.name}")
-            if len(doc_files) > 5:
-                print(f"   ... and {len(doc_files) - 5} more")
+            if len(doc_files) > 10:
+                print(f"   ... and {len(doc_files) - 10} more")
         else:
             print(f"⚠️ {docs_folder} folder exists but no documents found")
             print("📄 Add your documents (PDF, TXT, DOCX) to this folder")
@@ -103,14 +103,13 @@ def check_documents_folder():
 
 def start_server():
     """Start the FastAPI server"""
-    print("\n🚀 Starting RAG System Web Interface...")
+    print("\n Starting server interface...")
     print("=" * 50)
     
     # Make sure we're in the project root directory
     project_root = Path(__file__).parent.parent.parent
     os.chdir(project_root)
-    print(f"📁 Working directory: {project_root}")
-    
+   
     try:
         # Start the server
         process = subprocess.Popen([
@@ -126,23 +125,23 @@ def start_server():
         time.sleep(3)
         
         # Open browser
-        url = "http://localhost:8000"
-        print(f"🌐 Opening web interface at {url}")
-        webbrowser.open(url)
+        # url = "http://localhost:8000"
+        #  print(f"🌐 Opening web interface at {url}")
+        # webbrowser.open(url)
         
-        print("\n✅ RAG System Web Interface is running!")
-        print("=" * 50)
-        print("📱 Web Interface: http://localhost:8000")
-        print("📚 API Documentation: http://localhost:8000/api/docs")
-        print("🔧 Alternative Docs: http://localhost:8000/api/redoc")
-        print("\n💡 Tips:")
-        documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
-        print(f"   - Upload documents to the '{documents_dir}' folder")
-        print("   - Use the 'Process Documents' button to index new files")
-        print("   - Ask questions about your documents in the chat")
-        print("   - Monitor performance in the sidebar")
-        print("\n⏹️  Press Ctrl+C to stop the server")
-        print("=" * 50)
+        # print("\n✅ RAG System Web Interface is running!")
+        # print("=" * 50)
+        # print("📱 Web Interface: http://localhost:8000")
+        # print("📚 API Documentation: http://localhost:8000/api/docs")
+        # print("🔧 Alternative Docs: http://localhost:8000/api/redoc")
+        # print("\n💡 Tips:")
+        # documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+        # print(f"   - Upload documents to the '{documents_dir}' folder")
+        # print("   - Use the 'Process Documents' button to index new files")
+        # print("   - Ask questions about your documents in the chat")
+        # print("   - Monitor performance in the sidebar")
+        # print("\n⏹️  Press Ctrl+C to stop the server")
+        # print("=" * 50)
         
         # Wait for the process
         process.wait()
@@ -157,8 +156,7 @@ def start_server():
 
 def main():
     """Main startup function"""
-    print("🤖 RAG System Web Interface Startup")
-    print("=" * 50)
+   
     
     # Make sure we're in the project root directory
     project_root = Path(__file__).parent.parent.parent
@@ -167,7 +165,7 @@ def main():
     # Check if RAG_Core.py exists
     rag_core_path = Path("src/rag_core/RAG_Core.py")
     if not rag_core_path.exists():
-        print("❌ RAG_Core.py not found!")
+        print("❌ Main Module 'RAG_Core' not found!")
         print("Make sure the RAG core module is in the correct location")
         return
     
@@ -177,8 +175,7 @@ def main():
     check_documents_folder()
     
     if not requirements_ok:
-        print("\n❌ Please install missing requirements first:")
-        print("pip install -r requirements/web_requirements.txt")
+        print("\n❌ Please install missing requirements first:")       
         return
     
     if not env_vars_ok:
@@ -186,15 +183,12 @@ def main():
         print("Create a .env file with your API keys")
         return
     
-    print("\n🎉 All checks passed! Ready to start the web interface.")
+    print("\n Initial checks passed!")
     
-    # Ask user if they want to continue
-    try:
-       # response = input("\n▶️  Start the web server? (y/n): ").lower().strip()
-      #  if response in ['y', 'yes', '']:
+  
+    try:      
         start_server()
-      #  else:
-      #      print("👋 Startup cancelled")
+      
     except KeyboardInterrupt:
         print("\n👋 Startup cancelled")
 

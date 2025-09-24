@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RAG AI - Document Intelligence Platform</title>
+    <title>AnswerFlow AI</title>
     <link rel="stylesheet" href="/static/styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -15,13 +15,13 @@
             <div class="header-left">
                 <div class="logo">
                     <i class="fas fa-brain"></i>
-                    <span>RAG AI</span>
+                    <span>AnswerFlow</span>
                 </div>
             </div>
             <div class="header-center">
                 <div class="search-bar">
                     <i class="fas fa-search"></i>
-                    <input type="text" placeholder="Ask anything about your documents..." id="global-search">
+                    <input type="text" placeholder="Ask anything about your file and beyond" id="global-search">
                     <button class="search-btn" onclick="quickSearch()">
                         <i class="fas fa-paper-plane"></i>
                     </button>
@@ -46,28 +46,33 @@
             <!-- Sidebar Navigation -->
             <nav class="sidebar">
                 <div class="nav-section">
-                    <div class="nav-title">Core</div>
+                    <div class="nav-title">Home</div>
                     <div class="nav-item active" data-view="dashboard">
                         <i class="fas fa-home"></i>
                         <span>Dashboard</span>
                     </div>
+
+                    <div class="nav-title">Chats</div>                    
                     <div class="nav-item" data-view="chat">
                         <i class="fas fa-comments"></i>
-                        <span>AI Chat</span>
-                    </div>
-                    <div class="nav-item" data-view="documents">
-                        <i class="fas fa-file-alt"></i>
-                        <span>Documents</span>
-                     
-                    </div>
+                        <span>Chat</span>
+                    </div>                    
                 </div>
 
                 <div class="nav-section">
-                    <div class="nav-title">Management</div>
-                    <div class="nav-item" data-view="upload">
+
+                     <div class="nav-title">Files</div>
+
+                     <div class="nav-item" data-view="upload">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <span>Upload</span>
                     </div>
+
+                    <div class="nav-item" data-view="documents">
+                        <i class="fas fa-file-alt"></i>
+                        <span>Documents</span>                     
+                    </div>
+                   
                     <div class="nav-item" data-view="processing">
                         <i class="fas fa-cogs"></i>
                         <span>Processing</span>
@@ -107,7 +112,7 @@
                 <div class="view active" id="dashboard-view">
                     <div class="view-header">
                         <h1>Dashboard</h1>
-                        <p>Overview of your RAG AI system</p>
+                        <p>Your assistant overview</p>
                     </div>
 
                     <div class="dashboard-grid">
@@ -190,7 +195,7 @@
                 <div class="view" id="chat-view">
                     <div class="chat-container">
                         <div class="chat-header">
-                            <h2>AI Assistant</h2>
+                            <h2>New Chat</h2>
                             <div class="chat-actions">
                                 <button class="action-btn" onclick="clearChat()">
                                     <i class="fas fa-trash"></i>
@@ -203,12 +208,9 @@
                         
                         <div class="chat-messages" id="chat-messages">
                             <div class="message-group assistant">
-                                <div class="message-avatar">
-                                    <i class="fas fa-robot"></i>
-                                </div>
                                 <div class="message-content">
                                     <div class="message-text">
-                                        Hello! I'm your AI document assistant. I can help you find information from your uploaded documents. What would you like to know?
+                                       Hi! How can I assist you today?
                                     </div>
                                     <div class="message-time">Just now</div>
                                 </div>
@@ -217,9 +219,10 @@
 
                         <div class="chat-input-area">
                             <div class="input-container">
-                                <button class="attachment-btn">
+                                <button class="attachment-btn" id="chat-attachment-btn" type="button">
                                     <i class="fas fa-paperclip"></i>
                                 </button>
+                                <input type="file" id="chat-file-input" style="display:none;" accept=".pdf,.txt,.doc,.docx">
                                 <input type="text" id="chat-input" placeholder="Type your question..." onkeypress="handleChatKeyPress(event)">
                                 <button class="send-btn" onclick="sendChatMessage()">
                                     <i class="fas fa-paper-plane"></i>
@@ -230,53 +233,6 @@
                                 <button class="suggestion" onclick="useSuggestion(this)">Summarize my documents</button>
                                 <button class="suggestion" onclick="useSuggestion(this)">Find information about...</button>
                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Documents View -->
-                <div class="view" id="documents-view">
-                    <div class="view-header">
-                        <h1>Documents</h1>
-                        <div class="view-actions">
-                            <div class="view-controls">
-                                <button class="control-btn" onclick="toggleDocumentView('grid')">
-                                    <i class="fas fa-th"></i>
-                                </button>
-                                <button class="control-btn active" onclick="toggleDocumentView('list')">
-                                    <i class="fas fa-list"></i>
-                                </button>
-                            </div>
-                            <button class="primary-btn" onclick="showView('upload')">
-                                <i class="fas fa-plus"></i>
-                                Add Documents
-                            </button>
-                        </div>
-                    </div>
-
-                    <div class="documents-container">
-                        <div class="documents-header">
-                            <div class="search-filter">
-                                <input type="text" placeholder="Search documents..." id="document-search">
-                                <select id="document-filter">
-                                    <option value="all">All Types</option>
-                                    <option value="pdf">PDF</option>
-                                    <option value="txt">Text</option>
-                                    <option value="docx">Word</option>
-                                </select>
-                            </div>
-                            <div class="sort-options">
-                                <select id="document-sort">
-                                    <option value="name">Name</option>
-                                    <option value="date">Date Added</option>
-                                    <option value="size">File Size</option>
-                                    <option value="type">Type</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="documents-list" id="documents-list">
-                            <!-- Documents will be populated here -->
                         </div>
                     </div>
                 </div>
@@ -294,6 +250,7 @@
                                 <i class="fas fa-cloud-upload-alt"></i>
                                 <h3>Drag & Drop Files Here</h3>
                                 <p>or click to browse</p>
+                                <p>Supported file type: .pdf, .txt, .doc, .docx</p>
                                 <button class="browse-btn" id="browse-btn">
                                     Choose Files
                                 </button>
@@ -304,17 +261,43 @@
                         <div class="upload-queue" id="upload-queue">
                             <!-- Upload queue items will appear here -->
                         </div>
-
-                        <div class="upload-info">
-                            <h4>Supported Formats</h4>
-                            <div class="format-list">
-                                <span class="format-item"><i class="fas fa-file-pdf"></i> PDF</span>
-                                <span class="format-item"><i class="fas fa-file-word"></i> Word</span>
-                                <span class="format-item"><i class="fas fa-file-alt"></i> Text</span>
-                            </div>
-                        </div>
+                        
                     </div>
                 </div>
+
+                <!-- Documents View -->
+                <div class="view" id="documents-view">
+                    <div class="view-header">
+                        <h1>Your Documents</h1>
+                        <p>Browse, search, and manage all your uploaded files here.</p>
+                        <div class="view-actions">
+                        <!-- <input type="file" id="chat-file-input" style="display:none;" accept=".pdf,.txt,.doc,.docx"> -->
+                           <button class="primary-btn" onclick="showView('upload')">                                 
+                                <i class="fas fa-cloud-upload-alt"></i>                                 
+                                Upload Files
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="documents-container">
+                        <div class="documents-header">
+                            <div class="search-filter">
+                                <input type="text" placeholder="Search documents..." id="document-search">
+                                <select id="document-filter">
+                                    <option value="all">All Types</option>
+                                    <option value="pdf">PDF</option>
+                                    <option value="txt">Text</option>
+                                    <option value="docx">Word</option>
+                                </select>
+                            </div>
+                            
+                        </div>
+
+                        <div class="documents-list" id="documents-list">
+                            <!-- Documents will be populated here -->
+                        </div>
+                    </div>
+                </div>               
 
                 <!-- Processing View -->
                 <div class="view" id="processing-view">
@@ -472,5 +455,6 @@
     </div>
 
     <script src="/static/app.js"></script>
+</body>
 </body>
 </html>
