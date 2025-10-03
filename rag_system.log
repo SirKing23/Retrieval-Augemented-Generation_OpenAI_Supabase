@@ -1,0 +1,22 @@
+2025-10-03 17:33:06,731 - PersistentCache - INFO - Loaded embedding_cache with 805 items
+2025-10-03 17:33:06,733 - PersistentCache - INFO - Loaded response_cache with 28 items
+2025-10-03 17:33:06,734 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-10-03 17:33:14,363 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-03 17:33:14,404 - RAGSystem - INFO - Query classified as 'general_knowledge' with confidence 0.85, routing to 'direct' (method: hybrid_llm_fallback)
+2025-10-03 17:33:16,742 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-03 17:33:16,747 - RAGSystem - INFO - Direct answer generated in 2.34s
+2025-10-03 17:33:16,789 - PersistentCache - INFO - Saved caches: 805 embeddings, 29 responses
+2025-10-03 17:36:10,788 - PersistentCache - INFO - Loaded embedding_cache with 805 items
+2025-10-03 17:36:10,825 - PersistentCache - INFO - Loaded response_cache with 29 items
+2025-10-03 17:36:10,826 - RAGSystem - INFO - OptimizedRAGSystem initialized successfully with persistent caching
+2025-10-03 17:36:31,246 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-03 17:36:31,303 - RAGSystem - INFO - Query classified as 'domain_specific' with confidence 0.85, routing to 'knowledge_base' (method: hybrid_llm_fallback)
+2025-10-03 17:36:32,468 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/embeddings "HTTP/1.1 200 OK"
+2025-10-03 17:36:32,517 - PersistentCache - INFO - Saved caches: 806 embeddings, 29 responses
+2025-10-03 17:36:36,202 - httpx - INFO - HTTP Request: POST https://roensfpgcxsgwueawwvf.supabase.co/rest/v1/rpc/match_documents "HTTP/2 200 OK"
+2025-10-03 17:36:37,340 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-03 17:36:37,350 - RAGSystem - INFO - Document relevance assessment: Documents are highly relevant to the query (score: 0.90)
+2025-10-03 17:36:41,033 - httpx - INFO - HTTP Request: POST https://api.openai.com/v1/chat/completions "HTTP/1.1 200 OK"
+2025-10-03 17:36:41,043 - RAGSystem - INFO - Query processed: 37 chars, 10.86s, 5 docs retrieved
+2025-10-03 17:36:41,043 - RAGSystem - INFO - Performance - Embedding: 1.21s, Search: 3.70s, Generation: 2.98s, Total: 10.86s
+2025-10-03 17:36:41,098 - PersistentCache - INFO - Saved caches: 806 embeddings, 30 responses

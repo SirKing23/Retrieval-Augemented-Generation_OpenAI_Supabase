@@ -6,6 +6,6 @@ echo ===================================
 echo.
 
 cd src\server
-python start_website.py
+python start_server.py
 
 pause
