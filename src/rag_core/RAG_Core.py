@@ -1,14 +1,3 @@
-"""
-Optimized RAG System with comprehensive improvements including:
-- Performance optimizations
-- Memory management
-- Async operations
-- Logging and monitoring
-- Error recovery
-- Security improvements
-- Configuration management
-"""
-
 from openai import OpenAI
 import os
 from supabase import create_client, Client
@@ -308,20 +297,10 @@ class PersistentCacheManager:
         }
 
 class RAGSystem:
-    """
-    RAG System with comprehensive improvements including:
-    - Performance optimizations (caching, batch processing)
-    - Memory management
-    - Async operations
-    - Logging and monitoring
-    - Error recovery with retry logic
-    - Security improvements
-    - Configuration management
-    """
 
     def __init__(self, config: Optional[RAGSystemConfig] = None, use_async: bool = False):
         """
-        Initialize the optimized RAG system
+        Initialize the RAG system
         
         Args:
             config: Configuration object. If None, will create from environment variables
@@ -434,7 +413,7 @@ class RAGSystem:
             }
         }
         
-        self.logger.logger.info("OptimizedRAGSystem initialized successfully with persistent caching")
+        self.logger.logger.info("RAG System initialized successfully with persistent caching")
 
     def _validate_initialization_parameters(self):
         """Validate initialization parameters"""
@@ -457,7 +436,7 @@ class RAGSystem:
         """Validate API key format and basic security"""
         if not api_key or len(api_key) < 20:
             return False
-        # Add more validation logic as needed
+       
         return True
 
     def sanitize_input(self, text: str) -> str:
@@ -689,19 +668,19 @@ Respond with ONLY the category name (general_knowledge, domain_specific, or ambi
             # Create relevance assessment prompt
             relevance_prompt = f"""Assess if the provided documents are relevant to answering the user's question.
 
-User Question: "{question}"
+            User Question: "{question}"
 
-Documents Retrieved:
-{combined_content}
+            Documents Retrieved:
+            {combined_content}
 
-Task: Determine if these documents contain information that would help answer the user's question.
+            Task: Determine if these documents contain information that would help answer the user's question.
 
-Respond with one of these categories:
-- "HIGHLY_RELEVANT": Documents directly address the question and contain specific information to answer it
-- "SOMEWHAT_RELEVANT": Documents contain related information but may not fully answer the question  
-- "NOT_RELEVANT": Documents do not contain information relevant to answering the question
+            Respond with one of these categories:
+            - "HIGHLY_RELEVANT": Documents directly address the question and contain specific information to answer it
+            - "SOMEWHAT_RELEVANT": Documents contain related information but may not fully answer the question  
+            - "NOT_RELEVANT": Documents do not contain information relevant to answering the question
 
-Respond with ONLY the category name. No explanation needed."""
+            Respond with ONLY the category name. No explanation needed."""
             
             # Call LLM for relevance assessment
             response = self.ai_instance.chat.completions.create(
