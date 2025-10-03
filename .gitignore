@@ -1,6 +1,9 @@
 .env
+.vs
+.vscode
 data/processed_files.txt
 data/Knowledge_Base_Files/
 src/rag_core/__pychache__/
 src/server/__pychache__/
 src/server/cache/
+
