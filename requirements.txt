@@ -1,0 +1,46 @@
+# Core AI and OpenAI dependencies
+openai==1.65.1
+tiktoken==0.9.0
+
+# Database and Vector Storage
+supabase==2.13.0
+
+# Document Processing
+PyPDF2==3.0.1
+python-docx==1.1.2
+
+# LangChain for text processing and document loading
+langchain==0.3.19
+langchain-community==0.3.18
+langchain-core==0.3.77
+langchain-openai==0.3.7
+langchain-text-splitters==0.3.6
+
+# Web Framework and API
+fastapi==0.115.10
+uvicorn==0.34.0
+pydantic==2.10.6
+
+# HTTP and Async requests
+requests==2.32.3
+aiohttp==3.11.13
+
+# Environment configuration
+python-dotenv==1.1.1
+
+# Progress bars and utilities
+tqdm==4.67.1
+
+# Standard library dependencies (usually included with Python but listed for completeness)
+# asyncio - built-in
+# json - built-in
+# os - built-in
+# time - built-in
+# hashlib - built-in
+# logging - built-in
+# re - built-in
+# pickle - built-in
+# datetime - built-in
+# typing - built-in
+# dataclasses - built-in
+# functools - built-in
