@@ -70,6 +70,13 @@ class RAGApp {
             this.filterDocuments(document.getElementById('document-search').value, e.target.value);
         });
 
+        // Document checkboxes change event delegation
+        document.addEventListener('change', (e) => {
+            if (e.target.classList.contains('document-checkbox')) {
+                this.updateBulkActionButtons();
+            }
+        });
+
         // Upload area drag and drop
         const uploadArea = document.getElementById('upload-area');
         ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -254,6 +261,18 @@ class RAGApp {
         }
     }
 
+    updateBulkActionButtons() {
+        const checkedBoxes = document.querySelectorAll('.document-checkbox:checked');
+        const downloadBtn = document.getElementById('download-selected-btn');
+        const deleteBtn = document.getElementById('delete-selected-btn');
+        
+        if (downloadBtn && deleteBtn) {
+            const hasSelection = checkedBoxes.length > 0;
+            downloadBtn.disabled = !hasSelection;
+            deleteBtn.disabled = !hasSelection;
+        }
+    }
+
     displayDocuments(files) {
         const container = document.getElementById('documents-list');
                
@@ -263,10 +282,6 @@ class RAGApp {
                     <i class="fas fa-file-alt"></i>
                     <h3>No documents found</h3>
                     <p>Upload some documents to get started</p>
-                    <button class="primary-btn" onclick="ragApp.showView('upload')">
-                        <i class="fas fa-plus"></i>
-                        Upload Documents
-                    </button>
                 </div>
             `;
             return;
@@ -277,7 +292,10 @@ class RAGApp {
             const fileType = file.type.toLowerCase();
             
             return `
-                <div class="document-item" data-file-id="${file.id}">
+                <div class="document-item" data-file-id="${file.id}" data-file-type="${fileType}">
+                    <div class="document-select">
+                        <input type="checkbox" class="document-checkbox" value="${file.id}" aria-label="Select document ${file.name}">
+                    </div>
                     <div class="document-icon ${fileType}">
                         <i class="fas fa-file-${this.getFileIcon(fileType)}"></i>
                     </div>
@@ -294,7 +312,7 @@ class RAGApp {
                         </button>
                         <button class="document-btn" onclick="ragApp.deleteDocument('${file.id}')" title="Delete">
                             <i class="fas fa-trash"></i>
-                     
+                        </button>
                     </div>
                 </div>
             `;
@@ -508,15 +526,16 @@ class RAGApp {
 
     displayUploadQueue(files) {
         const queueContainer = document.getElementById('upload-queue');
-        
+        // Only show Upload All button if there are files
+        const showUploadAllBtn = files.length > 0;
         queueContainer.innerHTML = `
             <div class="upload-queue-header">
                 <h4>Upload Queue (${files.length} files)</h4>
-                
+                ${showUploadAllBtn ? `
                 <button class="primary-btn" id="upload-all-btn">
                     <i class="fas fa-upload"></i>
                     Upload All
-                </button>              
+                </button>` : ''}
             </div>
             <div class="upload-items">
                 ${files.map((file, index) => `
@@ -817,6 +836,104 @@ class RAGApp {
         } catch (error) {
             console.error('Error deleting document:', error);
             this.showNotification('Error deleting document', 'error');
+        }
+    }
+
+    async deleteSelectedDocuments() {
+        const checkedBoxes = document.querySelectorAll('.document-checkbox:checked');
+        if (checkedBoxes.length === 0) {
+            this.showNotification('No documents selected', 'warning');
+            return;
+        }
+
+        const fileIds = Array.from(checkedBoxes).map(cb => cb.value);
+        const count = fileIds.length;
+        
+        if (!confirm(`Are you sure you want to delete ${count} document(s)?`)) return;
+
+        try {
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const fileId of fileIds) {
+                try {
+                    const fileDeleteResponse = await fetch(`/api/delete-file/${encodeURIComponent(fileId)}`, {
+                        method: 'DELETE'
+                    });
+
+                    if (fileDeleteResponse.ok) {
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
+                } catch (error) {
+                    console.error(`Error deleting ${fileId}:`, error);
+                    failCount++;
+                }
+            }
+
+            // Reload documents list
+            await this.loadDocuments();
+
+            // Show summary notification
+            if (successCount > 0) {
+                this.showNotification(`Successfully deleted ${successCount} document(s)`, 'success');
+            }
+            if (failCount > 0) {
+                this.showNotification(`Failed to delete ${failCount} document(s)`, 'error');
+            }
+
+            // Ask about embeddings if any files were deleted
+            if (successCount > 0 && confirm('Do you also want to delete the vector embeddings associated with these documents?')) {
+                for (const fileId of fileIds) {
+                    try {
+                        await fetch(`/api/delete-embeddings/${encodeURIComponent(fileId)}`, {
+                            method: 'DELETE'
+                        });
+                    } catch (error) {
+                        console.error(`Error deleting embeddings for ${fileId}:`, error);
+                    }
+                }
+                this.showNotification('Vector embeddings deletion completed', 'success');
+            }
+
+            // Update button states
+            this.updateBulkActionButtons();
+        } catch (error) {
+            console.error('Error deleting documents:', error);
+            this.showNotification('Error deleting documents', 'error');
+        }
+    }
+
+    async downloadSelectedDocuments() {
+        const checkedBoxes = document.querySelectorAll('.document-checkbox:checked');
+        if (checkedBoxes.length === 0) {
+            this.showNotification('No documents selected', 'warning');
+            return;
+        }
+
+        const fileIds = Array.from(checkedBoxes).map(cb => cb.value);
+        
+        try {
+            for (const fileId of fileIds) {
+                // Create a temporary link and trigger download
+                const downloadUrl = `/documents/${encodeURIComponent(fileId)}`;
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = fileId;
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Small delay between downloads to avoid browser blocking
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
+            
+            this.showNotification(`Downloading ${fileIds.length} document(s)`, 'success');
+        } catch (error) {
+            console.error('Error downloading documents:', error);
+            this.showNotification('Error downloading documents', 'error');
         }
     }
 

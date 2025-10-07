@@ -268,14 +268,21 @@
                 <!-- Documents View -->
                 <div class="view" id="documents-view">
                     <div class="view-header">
-                        <h1>Your Documents</h1>
+                        <h1>Documents</h1>
                         <p>Browse, search, and manage all your uploaded files here.</p>
-                        <div class="view-actions">
-                        <!-- <input type="file" id="chat-file-input" style="display:none;" accept=".pdf,.txt,.doc,.docx"> -->
-                           <button class="primary-btn" onclick="showView('upload')">                                 
+                        <div class="view-actions">              
+                            <button class="primary-btn" onclick="showView('upload')">                                 
                                 <i class="fas fa-cloud-upload-alt"></i>                                 
                                 Upload Files
                             </button>
+                            <button class="secondary-btn" id="download-selected-btn" onclick="ragApp.downloadSelectedDocuments()" disabled>
+                                <i class="fas fa-download"></i>
+                                Download
+                            </button>
+                            <button class="danger-btn" id="delete-selected-btn" onclick="ragApp.deleteSelectedDocuments()" disabled>
+                                <i class="fas fa-trash"></i>
+                                Delete
+                            </button>                          
                         </div>
                     </div>
 
