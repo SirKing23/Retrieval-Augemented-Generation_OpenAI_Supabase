@@ -24,7 +24,8 @@ def check_requirements():
     required_packages = [
         'fastapi',
         'uvicorn',
-        'openai',       
+        'openai',
+        'supabase',
         'langchain'
     ]
     
@@ -50,7 +51,9 @@ def check_environment_variables():
     print("\n Checking environment variables...")
     
     required_vars = {
-        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY")      
+        "OPENAI_API_KEY": os.getenv("OPENAI_API_KEY"),
+        "SUPABASE_URL": os.getenv("SUPABASE_URL"), 
+        "SUPABASE_KEY": os.getenv("SUPABASE_KEY")
     }
     
     missing_vars = []
@@ -69,6 +72,34 @@ def check_environment_variables():
     print("✅ All environment variables set!")
     return True
 
+def check_documents_folder():
+    """Check if documents folder exists"""
+    print("\n Checking documents folder...")
+    
+    # Get documents directory from environment variable
+    documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+    docs_folder = Path(documents_dir)
+    
+    print(f"📁 Looking for documents in: {docs_folder}")
+    
+    if docs_folder.exists():
+        doc_files = list(docs_folder.glob("*.pdf")) + list(docs_folder.glob("*.txt")) + list(docs_folder.glob("*.docx"))
+        if doc_files:
+            print(f"✅ {docs_folder} folder exists with {len(doc_files)} documents")
+            print("📄 Documents found:")
+            for doc in doc_files[:10]:  # Show first 10
+                print(f"   - {doc.name}")
+            if len(doc_files) > 10:
+                print(f"   ... and {len(doc_files) - 10} more")
+        else:
+            print(f"⚠️ {docs_folder} folder exists but no documents found")
+            print("📄 Add your documents (PDF, TXT, DOCX) to this folder")
+    else:
+        print(f"❌ Documents folder not found: {docs_folder}")
+        print("Creating documents folder...")
+        docs_folder.mkdir(parents=True, exist_ok=True)
+        print(f"✅ Created documents folder: {docs_folder}")
+        print("📄 Add your documents (PDF, TXT, DOCX) to this folder")
 
 def start_server():
     """Start the FastAPI server"""
@@ -138,7 +169,8 @@ def main():
         return
     
     # 3. Check documents folder
-
+    check_documents_folder()       
+    
     
     print("\n Initial checks passed!")
     

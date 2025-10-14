@@ -29,7 +29,9 @@ class QuestionRequest(BaseModel):
 
 class QuestionResponse(BaseModel):
     response: str
-    response_time: float  
+    documents_found: int
+    response_time: float
+    sources: List[Dict[str, Any]]
     cached: bool
     session_id: str
 
@@ -64,7 +66,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount static files
+web_interface_path = os.path.join(os.path.dirname(__file__), '..', 'interfaces', 'web_interface')
+app.mount("/static", StaticFiles(directory=web_interface_path), name="static")
 
+# Mount documents directory for file access
+documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+if os.path.exists(documents_dir):
+    app.mount("/documents", StaticFiles(directory=documents_dir), name="documents")
 
 # Global variables
 rag_system: Optional[RAGSystem] = None
@@ -107,6 +116,16 @@ async def shutdown_event():
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
 
+# Serve the main web interface
+@app.get("/", response_class=HTMLResponse)
+async def serve_webapp():
+    """Serve the main web application"""
+    try:
+        html_file_path = os.path.join(os.path.dirname(__file__), '..', 'interfaces', 'web_interface', 'index.html')
+        with open(html_file_path, "r", encoding="utf-8") as file:
+            return HTMLResponse(content=file.read())
+    except FileNotFoundError:
+        return HTMLResponse(content="<h1>Error: Web interface files not found</h1>", status_code=500)
 
 # API Endpoints
 @app.post("/api/ask", response_model=QuestionResponse)
@@ -143,6 +162,128 @@ async def ask_question(request: QuestionRequest):
         logger.error(f"Error processing question: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# API call for processing documents in a directory - if the document is already in the processed files,
+# it will not be re-processed
+@app.post("/api/process-uploaded-files", response_model=UploadResponse)
+async def upload_documents(request: UploadRequest, background_tasks: BackgroundTasks):
+    """Process documents in specified directory"""
+    try:
+        directory = request.directory
+        
+        if not os.path.exists(directory):
+            raise HTTPException(status_code=404, detail=f"Directory '{directory}' not found")
+        
+        rag = get_rag_system()
+        
+        # Count files before processing
+        files_before = len(rag.load_processed_files())
+        
+        # Process files and measure time
+        start_time = time.time()
+        rag.initialize_files(directory)
+        processing_time = time.time() - start_time
+        
+        # Count files after processing
+        files_after = len(rag.load_processed_files())
+        files_processed = files_after - files_before
+        
+        # Save cache in background
+        background_tasks.add_task(rag.save_cache)
+        
+        return UploadResponse(
+            message=f"Successfully processed documents from {directory}",
+            files_processed=files_processed,
+            processing_time=processing_time
+        )
+        
+    except Exception as e:
+        logger.error(f"Error processing documents: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+#API call for uploading a single file to directory without processing for embedding
+@app.post("/api/upload-file")
+async def upload_file(file: UploadFile = File(...)):
+    """Upload a single file to the documents directory without processing"""
+    try:
+        # Get documents directory from environment
+        documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+        docs_path = Path(documents_dir)
+        
+        # Create directory if it doesn't exist
+        docs_path.mkdir(parents=True, exist_ok=True)
+        
+        # Validate file type
+        allowed_extensions = {'.pdf', '.txt', '.docx', '.doc'}
+        file_extension = Path(file.filename).suffix.lower()
+        
+        if file_extension not in allowed_extensions:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Unsupported file type. Allowed types: {', '.join(allowed_extensions)}"
+            )
+        
+        # Save file to documents directory
+        file_path = docs_path / file.filename
+        
+        # Check if file already exists
+        if file_path.exists():
+            # Generate unique filename
+            stem = file_path.stem
+            suffix = file_path.suffix
+            counter = 1
+            while file_path.exists():
+                file_path = docs_path / f"{stem}_{counter}{suffix}"
+                counter += 1
+        
+        # Write file to disk
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        logger.info(f"File uploaded successfully: {file_path}")
+        
+        return {
+            "message": f"File '{file.filename}' uploaded successfully",
+            "filename": file_path.name,
+            "size": len(content),
+            "path": str(file_path),
+            "processed": False
+        }
+        
+    except Exception as e:
+        logger.error(f"Error uploading file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/files")
+async def get_files():
+    """Get list of processed files"""
+    try:
+        # Get documents directory from environment
+        documents_dir = os.getenv("DOCUMENTS_DIR", "./data/Knowledge_Base_Files")
+        docs_path = Path(documents_dir)
+        
+        files = []
+        if docs_path.exists():
+            for file_path in docs_path.glob("*"):
+                if file_path.is_file() and file_path.suffix.lower() in ['.pdf', '.txt', '.docx', '.doc']:
+                    stat = file_path.stat()
+                    files.append({
+                        "id": str(file_path.stem),
+                        "name": file_path.name,
+                        "type": file_path.suffix.lower().replace('.', ''),
+                        "size": stat.st_size,
+                        "uploaded": time.ctime(stat.st_ctime),
+                        "path": str(file_path)
+                    })
+        
+        # Sort by upload time (newest first)
+        files.sort(key=lambda x: x['uploaded'], reverse=True)
+        
+        return files
+    
+    except Exception as e:
+        logger.error(f"Error getting files: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/stats", response_model=SystemStats)
 async def get_statistics():
@@ -251,6 +392,53 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         logger.error(f"WebSocket error for session {session_id}: {e}")
         await websocket.close()
 
+#API call for deleting a file in the directory
+@app.delete("/api/delete-file/{file_id}")
+async def delete_file(file_id: str):
+    """Delete a file from the documents directory by file_id"""
+    try:
+        rag = get_rag_system()
+        # Resolve full filename from file_id (stem)
+        documents_dir =rag.get_knowledge_base_directory()
+        docs_path = Path(documents_dir)
+        full_filename = None
+        for file_path in docs_path.glob("*"):
+            if file_path.is_file() and file_path.stem == file_id:
+                full_filename = file_path.name
+                break
+
+        if not full_filename:
+            raise HTTPException(status_code=404, detail=f"File with id '{file_id}' not found")
+        
+        isFileDeleted = rag.delete_file_from_documents_dir(full_filename)
+
+        if not isFileDeleted:
+            raise HTTPException(status_code=404, detail=f"File '{full_filename}' could not be deleted")
+        
+        logger.info(f"File deleted successfully: {full_filename}")
+
+        return isFileDeleted
+    except Exception as e:
+        logger.error(f"Error deleting file: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+#API call for deleting embeddings associated with a file
+@app.delete("/api/delete-embeddings/{file_id}")
+async def delete_embeddings(file_id: str):
+    """Delete embeddings associated with a file by file_id (stem)"""
+    try:
+        rag = get_rag_system()      
+        deleted = rag.delete_file_embeddings(file_id)
+        if deleted:
+            logger.info(f"Embeddings deleted for file_id: {file_id}")
+            return {"message": f"Embeddings for file '{file_id}' deleted successfully", "file_id": file_id}
+        else:
+            raise HTTPException(status_code=404, detail=f"No embeddings found for file id '{file_id}'")
+    except Exception as e:
+        logger.error(f"Error deleting embeddings: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+    
+    
 
 if __name__ == "__main__":
     import uvicorn
